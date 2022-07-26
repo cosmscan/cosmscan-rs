@@ -1,0 +1,37 @@
+version: '3'
+
+services:
+  novachain:
+    image: tendermint/gaia:v4.2.0
+    restart: always
+    user: root
+    volumes:
+      - ./scripts:/gaia
+      - chain-home:/data/chain
+    command:
+      - /bin/sh
+      - -c
+      - |
+        echo "start run single node."
+        sudo apk add jq
+        /gaia/init_chain.sh
+    ports:
+      - 26656:26656
+      - 26657:26657
+      - 1317:1317
+      - 9090:9090
+      - 9091:9091
+#  postgres:
+#    image: postgres:latest
+#    container_name: postgres
+#    restart: always
+#    ports:
+#      - "5432:5432"
+#    environment:
+#      POSTGRES_USER: "cosmoscout"
+#      POSTGRES_PASSWORD: "cosmoscout"
+#    volumes:
+#      - ./internal/db/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+
+volumes:
+  chain-home:
