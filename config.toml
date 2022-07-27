@@ -1,2 +1,12 @@
+[fetcher]
 tendermint_rpc = "http://localhost:26657/"
 cosmos_rest = "http://localhost:1317/"
+start_block = 0
+try_resume_from_db = true
+
+[db]
+host = "localhost"
+port = 5432
+user = "cosmoscout_user"
+password = "cosmoscout_password"
+database = "cosmoscout"

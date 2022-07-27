@@ -9,5 +9,5 @@ It's inherently built for enterprise-level.
 $ docker-compose up
 
 # this start to run explorer runtime application
-$ cargo run
+$ cargo run --bin fetcher -- --filename config.toml
 ```

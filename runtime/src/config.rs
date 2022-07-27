@@ -3,15 +3,32 @@ use std::error::Error;
 use std::fs;
 
 #[derive(Debug, PartialEq, Deserialize)]
-pub struct RuntimeConfig {
-    pub tendermint_rpc: String,
-    pub cosmos_rest: String,
+pub struct Config {
+    pub fetcher: FetcherConfig,
+    pub db: DBConfig,
 }
 
-impl RuntimeConfig {
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub struct FetcherConfig {
+    pub tendermint_rpc: String,
+    pub cosmos_rest: String,
+    pub start_block: u32,
+    pub try_resume_from_db: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub struct DBConfig {
+    pub host: String,
+    pub port: u32,
+    pub user: String,
+    pub password: String,
+    pub database: String,
+}
+
+impl Config {
     pub fn from_file(file: String) -> Result<Self, Box<dyn Error>> {
         let raw_config = fs::read_to_string(file)?;
-        let config:RuntimeConfig = toml::from_str(raw_config.as_str()).unwrap();
+        let config:Config = toml::from_str(raw_config.as_str()).unwrap();
         Ok(config)
     }
 }
@@ -22,10 +39,12 @@ mod tests {
 
     #[test]
     fn test_read() {
-        let config = RuntimeConfig::from_file("../config.toml".to_string()).unwrap();
-        assert_eq!(config, RuntimeConfig{
+        let config = Config::from_file("../config.toml".to_string()).unwrap();
+        assert_eq!(config.fetcher, FetcherConfig {
             tendermint_rpc: "http://localhost:26657/".to_string(),
-            cosmos_rest: "http://localhost:1317/".to_string()
-        })
+            cosmos_rest: "http://localhost:1317/".to_string(),
+            start_block: 0,
+            try_resume_from_db: true,
+        });
     }
 }
