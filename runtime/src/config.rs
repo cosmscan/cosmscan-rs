@@ -43,7 +43,7 @@ mod tests {
         assert_eq!(config.fetcher, FetcherConfig {
             tendermint_rpc: "http://localhost:26657/".to_string(),
             cosmos_rest: "http://localhost:1317/".to_string(),
-            start_block: 0,
+            start_block: 1,
             try_resume_from_db: true,
         });
     }

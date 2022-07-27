@@ -1,9 +1,6 @@
-use std::thread::sleep;
-use std::time::Duration;
-use tendermint::block::Height;
-use tendermint_rpc::{Client, HttpClient};
 use clap::Parser;
-use runtime::config::{Config, FetcherConfig};
+use runtime::config::{Config};
+use runtime::fetcher::FetcherApp;
 
 #[derive(Parser)]
 #[clap(author,version,about)]
@@ -14,13 +11,14 @@ struct Cli {
 
 #[tokio::main]
 async fn main() {
+    env_logger::init();
+    
     let cli:Cli = Cli::parse();
-    println!("{}", cli.filename);
-
     let config = match Config::from_file(cli.filename.clone()) {
         Ok(_config) => _config,
         Err(e) => panic!("wrong config file location: {}, err: {}", cli.filename, e),
     };
 
-    println!("read from config: {:?}", config);
+    let fetcher = FetcherApp::new(config.fetcher);
+    fetcher.start().await;
 }

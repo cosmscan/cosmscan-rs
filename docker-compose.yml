@@ -1,7 +1,7 @@
 version: '3'
 
 services:
-  novachain:
+  testchain:
     image: tendermint/gaia:v4.2.0
     restart: always
     user: root

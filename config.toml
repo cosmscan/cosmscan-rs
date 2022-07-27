@@ -1,7 +1,7 @@
 [fetcher]
 tendermint_rpc = "http://localhost:26657/"
 cosmos_rest = "http://localhost:1317/"
-start_block = 0
+start_block = 1
 try_resume_from_db = true
 
 [db]
