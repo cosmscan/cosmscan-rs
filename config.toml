@@ -1,0 +1,2 @@
+tendermint_rpc = "http://localhost:26657/"
+cosmos_rest = "http://localhost:1317/"

@@ -1,12 +1,23 @@
+mod config;
+
 use tendermint::block::Height;
 use tendermint_rpc::{Client, HttpClient};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() {
+    let mut block_number = Height::from(1u32);
     let client = HttpClient::new("http://localhost:26657").unwrap();
-    let block = client.block(Height::from(1u32)).await.unwrap();
 
-    println!("block height at 1 =  {:?}", block);
-
-    Ok(())
+    loop {
+        let block = client.block(block_number).await;
+        match block {
+            Ok(res) => {
+                println!("block height at {} = {:?}", block_number, res);
+                block_number = Height::from(block_number.value().checked_add(1));
+            },
+            Err(err) => {
+                println!("error occurred with {}", err);
+            }
+        }
+    }
 }
