@@ -41,40 +41,51 @@ impl FetcherApp {
 
         loop {
             let client = client.clone();
-            let result = client.block(current_block).await;
-            match result {
-                Ok(block) => {
-                    info!("block fetched hash: {:?}, block_number: {}", block.block.header.hash(), current_block);
-
-                    let block_results = client.block_results(current_block).await.unwrap();
-                    info!("block_result: {:?}, block_number: {}", block_results, current_block);
-
-                    let future_fetch_txes = block.block.data.iter()
-                        .map(|tx| self.data_to_hash(tx))
-                        .map(|hash| {
-                            let hash_wrapped = Hash::from_str(hash.as_str()).unwrap();
-                            let t_client = client.clone();
-
-                            async move { t_client.tx(hash_wrapped, false).await.unwrap() }
-                        });
-
-                    let results = future::join_all(future_fetch_txes).await;
-
-                    for tx in results.iter() {
-                        info!("transaction received: {:?}", tx);
-                    }
-
+            match self.fetch_and_save_block(client, current_block).await {
+                Ok(_) => {
                     current_block = current_block.increment();
                 },
-                Err(_) => {
-                    sleep(Duration::from_millis(500)).await;
-                },
+                Err(e) => {
+                    error!("unexpected error during fetching blockchain: {:?}", e);
+                    sleep(Duration::from_millis(200)).await;
+                }
             }
         }
     }
 
+    async fn fetch_and_save_block(&self, client: Arc<HttpClient>, block_height: Height) -> Result<(), Box<dyn std::error::Error>> {
+        let block = client.block(block_height).await?;
+        info!("block fetched hash {:?}, block_number: {}", block.block.header.hash(), block_height);
+
+        let block_results = client.block_results(block_height).await?;
+
+        // fetch all transactions
+        let future_fetch_txes = block.block.data.iter()
+            .map(|tx| self.convert_txhash(tx))
+            .map(|hash| {
+                let hash_wrapped = Hash::from_str(hash.as_str()).unwrap();
+                let t_client = client.clone();
+
+                async move { t_client.tx(hash_wrapped, false).await }
+            });
+
+        let fetch_txs_result = future::join_all(future_fetch_txes).await;
+
+        // if one of transaction failed, then it should return error
+        let has_error = fetch_txs_result.iter().filter_map(|x| match x {
+            Ok(_) => None,
+            Err(err) => Some(err),
+        }).collect::<Vec<_>>();
+
+        if has_error.len() > 0 {
+            return Err(has_error[0].clone().into());
+        }
+        
+        Ok(())
+    }
+
     /// convert block.data into transaction hash
-    fn data_to_hash(&self, data: impl AsRef<[u8]>) -> String{
+    fn convert_txhash(&self, data: impl AsRef<[u8]>) -> String{
         let mut hasher = Sha256::new();
         hasher.update(data);
         let tx_hash = hasher.finalize();
