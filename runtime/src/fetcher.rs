@@ -1,6 +1,10 @@
 use std::{time::Duration};
+use std::str::FromStr;
+use std::sync::{Arc, Mutex};
+use futures::future;
 use log::{info, error};
 use sha2::{Sha256, Digest};
+use tendermint::abci::transaction::Hash;
 use tendermint::block::Height;
 use tendermint_rpc::{Client, HttpClient};
 use tokio::time::sleep;
@@ -25,28 +29,45 @@ impl FetcherApp {
             panic!("start block must be greater than 0");
         }
 
+        // connect to the tendermint rpc server
         let start_block = Height::from(self.config.start_block);
         let client = match HttpClient::new(self.config.tendermint_rpc.as_str()) {
-            Ok(c) => c,
+            Ok(c) => Arc::new(c),
             Err(e) => {
                 panic!("failed to connect to the tendermint rpc, endpoint: {}, err: {}", self.config.tendermint_rpc, e);
             }
         };
 
+        // start from current block
         let mut current_block = start_block.clone();
         info!("start to listen blocks from `{}` height", current_block);
 
         loop {
+            let client = client.clone();
             let result = client.block(current_block).await;
             match result {
                 Ok(block) => {
                     info!("block fetched hash: {:?}, block_number: {}", block.block.header.hash(), current_block);
-                    current_block = current_block.increment();
 
-                    for tx in block.block.data.iter() {
-                        let hash = self.data_to_hash(tx);
-                        info!("tx_hash found: {}", hash);
+                    let block_results = client.block_results(current_block).await.unwrap();
+                    info!("block_result: {:?}, block_number: {}", block_results, current_block);
+
+                    let future_fetch_txes = block.block.data.iter()
+                        .map(|tx| self.data_to_hash(tx))
+                        .map(|hash| {
+                            let hash_wrapped = Hash::from_str(hash.as_str()).unwrap();
+                            let t_client = client.clone();
+
+                            async move { t_client.tx(hash_wrapped, false).await.unwrap() }
+                        });
+
+                    let results = future::join_all(future_fetch_txes).await;
+
+                    for tx in results.iter() {
+                        info!("transaction received: {:?}", tx);
                     }
+
+                    current_block = current_block.increment();
                 },
                 Err(_) => {
                     sleep(Duration::from_millis(500)).await;

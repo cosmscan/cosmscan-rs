@@ -1142,6 +1142,7 @@ dependencies = [
  "async-trait",
  "clap",
  "env_logger",
+ "futures",
  "log",
  "reqwest",
  "serde",
