@@ -14,10 +14,8 @@ async fn main() {
     env_logger::init();
     
     let cli:Cli = Cli::parse();
-    let config = match Config::from_file(cli.filename.clone()) {
-        Ok(_config) => _config,
-        Err(e) => panic!("wrong config file location: {}, err: {}", cli.filename, e),
-    };
+    let config = Config::from_file(cli.filename.clone())
+        .expect(format!("wrong config file location: {}", cli.filename).as_str());
 
     let fetcher = FetcherApp::new(config.fetcher);
     fetcher.start().await;

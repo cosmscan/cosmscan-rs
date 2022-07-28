@@ -31,12 +31,9 @@ impl FetcherApp {
 
         // connect to the tendermint rpc server
         let start_block = Height::from(self.config.start_block);
-        let client = match HttpClient::new(self.config.tendermint_rpc.as_str()) {
-            Ok(c) => Arc::new(c),
-            Err(e) => {
-                panic!("failed to connect to the tendermint rpc, endpoint: {}, err: {}", self.config.tendermint_rpc, e);
-            }
-        };
+        let client = HttpClient::new(self.config.tendermint_rpc.as_str())
+            .map(|c| Arc::new(c))
+            .expect(format!("failed to connect to the tendermint rpc, endpoint: {}", self.config.tendermint_rpc).as_str());
 
         // start from current block
         let mut current_block = start_block.clone();
