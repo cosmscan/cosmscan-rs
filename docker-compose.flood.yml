@@ -34,17 +34,22 @@ services:
         sleep 10;
       
         /gaia/flood.sh
-#  postgres:
-#    image: postgres:latest
-#    container_name: postgres
-#    restart: always
-#    ports:
-#      - "5432:5432"
-#    environment:
-#      POSTGRES_USER: "cosmoscout"
-#      POSTGRES_PASSWORD: "cosmoscout"
-#    volumes:
-#      - ./internal/db/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: "cosmoscout"
+      POSTGRES_PASSWORD: "cosmoscout"
+    volumes:
+      - ./internal/db/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "8082:8080"
 
 volumes:
   chain-home:
