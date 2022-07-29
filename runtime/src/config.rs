@@ -1,3 +1,4 @@
+use cosmoscout_models::config::DBConfig;
 use serde::Deserialize;
 use std::error::Error;
 use std::fs;
@@ -14,15 +15,6 @@ pub struct FetcherConfig {
     pub cosmos_rest: String,
     pub start_block: u32,
     pub try_resume_from_db: bool,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-pub struct DBConfig {
-    pub host: String,
-    pub port: u32,
-    pub user: String,
-    pub password: String,
-    pub database: String,
 }
 
 impl Config {

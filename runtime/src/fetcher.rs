@@ -71,6 +71,8 @@ impl FetcherApp {
 
         let fetch_txs_result = future::join_all(future_fetch_txes).await;
 
+        info!("block_result: {:?}, fetch_tx_result: {:?}", block_results, fetch_txs_result);
+
         // if one of transaction failed, then it should return error
         let has_error = fetch_txs_result.iter().filter_map(|x| match x {
             Ok(_) => None,
