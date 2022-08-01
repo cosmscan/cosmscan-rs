@@ -1,40 +1,59 @@
-use tokio_postgres::{NoTls, Client};
+use diesel::{r2d2::ConnectionManager, PgConnection};
+use r2d2::{Pool, PooledConnection};
 
 use crate::config::DBConfig;
 
-pub struct Database {
-    pub(crate) config: DBConfig,
-    pub(crate) client: Option<Client>,
+pub trait Database {
+    fn connect(&mut self) -> Result<(), Box<dyn std::error::Error>>;
+    fn conn(&self) -> Option<PooledConnection<ConnectionManager<PgConnection>>>;
 }
 
-impl Database {
+pub struct BackendDB {
+    pub config: DBConfig,
+    pub client: Option<Pool<ConnectionManager<PgConnection>>>,
+}
+
+impl BackendDB {
     pub fn new(config: DBConfig) -> Self {
-        return Database {
+        return BackendDB {
             config: config,
             client: None,
         }
     }
+}
 
-    pub async fn connect(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        let config_names = format!(
-            "host={} port={} user={} password={} dbname={}",
-            self.config.host,
-            self.config.port,
+impl Database for BackendDB {
+    fn connect(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let db_url = format!("postgres://{}:{}@{}:{}/{}",
             self.config.user,
             self.config.password,
+            self.config.host,
+            self.config.port,
             self.config.database,
         );
 
-        let (client, connection) = tokio_postgres::connect(config_names.as_str(),NoTls).await?;
-        connection.await?;
-
-        self.client = Some(client);
+        let manager = ConnectionManager::<PgConnection>::new(db_url.clone());
+        let pool = Pool::new(manager)
+            .expect(format!("failed to conect to the database: {}", db_url).as_str());
+        
+        self.client = Some(pool);
 
         Ok(())
     }
 
-    pub async fn close(&self) {
-    
+    fn conn(&self) -> Option<PooledConnection<ConnectionManager<PgConnection>>> {
+        self.client.as_ref().map(|p| p.get().unwrap())
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn connect_database() {
+        let mut db = BackendDB::new(DBConfig::default());
+        let result = db.connect();
+        assert_eq!(result.unwrap(), ());
+    }
+}

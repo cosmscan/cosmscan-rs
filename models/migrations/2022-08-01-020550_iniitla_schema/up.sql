@@ -1,10 +1,9 @@
-CREATE DATABASE cosmoscout;
-\c cosmoscout;
+-- Your SQL goes here
 
 -- chains --
 CREATE TABLE IF NOT EXISTS chains (
-    id SERIAL NOT NULL,
-    chain_id VARCHAR(128) UNIQUE NOT NULL,
+    id SERIAL PRIMARY KEY,
+    chain_id VARCHAR(32) UNIQUE NOT NULL,
     chain_name VARCHAR(128) NOT NULL,
     inserted_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP
@@ -12,12 +11,11 @@ CREATE TABLE IF NOT EXISTS chains (
 
 -- blocks --
 CREATE TABLE IF NOT EXISTS blocks (
-    id SERIAL NOT NULL,
+    id SERIAL PRIMARY KEY,
     chain_id INT NOT NULL,
     height BIGINT NOT NULL,
     block_hash VARCHAR(256) NOT NULL,
     prev_hash VARCHAR(256) NOT NULL,
-    chain_id VARCHAR(32) NOT NULL,
     proposer_address VARCHAR(256) NOT NULL,
     last_commit_hash VARCHAR(256) NOT NULL,
     data_hash VARCHAR(256) NOT NULL,
@@ -36,7 +34,7 @@ CREATE INDEX idx_blocks_block_hash ON blocks(block_hash);
 
 -- transactions --
 CREATE TABLE IF NOT EXISTS transactions (
-    id serial PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     chain_id INT NOT NULL,
     transaction_hash VARCHAR(256) UNIQUE NOT NULL,
     height BIGINT NOT NULL,
@@ -56,7 +54,7 @@ CREATE INDEX idx_transactions_tx_hash ON transactions(transaction_hash);
 
 -- events --
 CREATE TABLE IF NOT EXISTS events (
-    id serial PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     chain_id INT NOT NULL,
     tx_hash VARCHAR(256) NOT NULL,
     event_type VARCHAR(256) NOT NULL,

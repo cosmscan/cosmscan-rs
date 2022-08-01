@@ -8,3 +8,16 @@ pub struct DBConfig {
     pub password: String,
     pub database: String,
 }
+
+impl DBConfig {
+    #[cfg(test)]
+    pub(crate) fn default() -> Self {
+        DBConfig { 
+            host: "localhost".to_string(), 
+            port: 5432, 
+            user: "cosmoscout".to_string(), 
+            password: "cosmoscout".to_string(), 
+            database: "cosmoscout".to_string(),
+        }
+    }
+}
