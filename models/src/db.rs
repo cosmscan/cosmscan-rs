@@ -4,7 +4,7 @@ use r2d2::{Pool, PooledConnection};
 use crate::config::DBConfig;
 
 pub trait Database {
-    fn connect(&mut self) -> Result<(), Box<dyn std::error::Error>>;
+    fn connect(&mut self) -> Result<bool, Box<dyn std::error::Error>>;
     fn conn(&self) -> Option<PooledConnection<ConnectionManager<PgConnection>>>;
 }
 
@@ -23,7 +23,7 @@ impl BackendDB {
 }
 
 impl Database for BackendDB {
-    fn connect(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    fn connect(&mut self) -> Result<bool, Box<dyn std::error::Error>> {
         let db_url = format!("postgres://{}:{}@{}:{}/{}",
             self.config.user,
             self.config.password,
@@ -38,7 +38,7 @@ impl Database for BackendDB {
         
         self.client = Some(pool);
 
-        Ok(())
+        Ok(true)
     }
 
     fn conn(&self) -> Option<PooledConnection<ConnectionManager<PgConnection>>> {
@@ -54,6 +54,6 @@ mod tests {
     fn connect_database() {
         let mut db = BackendDB::new(DBConfig::default());
         let result = db.connect();
-        assert_eq!(result.unwrap(), ());
+        assert_eq!(result.unwrap(), true);
     }
 }
