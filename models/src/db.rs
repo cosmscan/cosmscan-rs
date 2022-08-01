@@ -35,7 +35,7 @@ impl Database for BackendDB {
 
         let manager = ConnectionManager::<PgConnection>::new(db_url.clone());
         let pool = Pool::new(manager)
-            .expect(format!("failed to conect to the database: {}", db_url).as_str());
+            .unwrap_or_else(|| panic!("failed to conect to the database: {}", db_url));
 
         self.client = Some(pool);
 

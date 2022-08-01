@@ -15,7 +15,7 @@ async fn main() {
 
     let cli: Cli = Cli::parse();
     let config = Config::from_file(cli.filename.clone())
-        .expect(format!("wrong config file location: {}", cli.filename).as_str());
+        .unwrap_or_else(|| panic!("wrong config file location: {}", cli.filename))
 
     let fetcher = FetcherApp::new(config.fetcher);
     fetcher.start().await;
