@@ -5,6 +5,8 @@ CREATE TABLE IF NOT EXISTS chains (
     id SERIAL PRIMARY KEY,
     chain_id VARCHAR(32) UNIQUE NOT NULL,
     chain_name VARCHAR(128) NOT NULL,
+    icon_url VARCHAR(256) NULL,
+    website VARCHAR(256) NULL,
     inserted_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP
 );
@@ -56,7 +58,8 @@ CREATE INDEX idx_transactions_tx_hash ON transactions(transaction_hash);
 CREATE TABLE IF NOT EXISTS events (
     id SERIAL PRIMARY KEY,
     chain_id INT NOT NULL,
-    tx_hash VARCHAR(256) NOT NULL,
+    tx_type SMALLINT NOT NULL, -- 0: transaction, 1: begin_block, 2: after_block
+    tx_hash VARCHAR(256), -- it can be null
     event_type VARCHAR(256) NOT NULL,
     event_key VARCHAR(256) NOT NULL,
     event_value VARCHAR(256) NOT NULL,
