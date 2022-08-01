@@ -1,9 +1,9 @@
 use clap::Parser;
-use runtime::config::{Config};
+use runtime::config::Config;
 use runtime::fetcher::FetcherApp;
 
 #[derive(Parser)]
-#[clap(author,version,about)]
+#[clap(author, version, about)]
 struct Cli {
     #[clap(short, long, value_parser)]
     filename: String,
@@ -12,8 +12,8 @@ struct Cli {
 #[tokio::main]
 async fn main() {
     env_logger::init();
-    
-    let cli:Cli = Cli::parse();
+
+    let cli: Cli = Cli::parse();
     let config = Config::from_file(cli.filename.clone())
         .expect(format!("wrong config file location: {}", cli.filename).as_str());
 

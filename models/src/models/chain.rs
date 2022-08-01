@@ -1,9 +1,9 @@
 use chrono::NaiveDateTime;
-use diesel::PgConnection;
-use serde::{Serialize, Deserialize};
 use diesel::prelude::*;
-use diesel::Queryable;
 use diesel::Insertable;
+use diesel::PgConnection;
+use diesel::Queryable;
+use serde::{Deserialize, Serialize};
 
 use crate::errors::DBModelError;
 use crate::schema::chains;
@@ -20,15 +20,14 @@ pub struct Chain {
 
 impl Chain {
     pub fn query_all(conn: &PgConnection) -> Result<Vec<Chain>, DBModelError> {
-        all_chains.order(chains::id.desc())
+        all_chains
+            .order(chains::id.desc())
             .load::<Chain>(conn)
-            .map_err(|e| DBModelError::QueryError(e))
+            .map_err(|e| e.into())
     }
 
     pub fn count_all(conn: &PgConnection) -> Result<i64, DBModelError> {
-        all_chains.count()
-            .get_result(conn)
-            .map_err(|e| DBModelError::QueryError(e))
+        all_chains.count().get_result(conn).map_err(|e| e.into())
     }
 }
 
@@ -45,15 +44,18 @@ impl NewChain {
         diesel::insert_into(chains::table)
             .values(new_chain)
             .execute(conn)
-            .map_err(|e| DBModelError::QueryError(e))
+            .map_err(|e| e.into())
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::{
+        config::DBConfig,
+        db::{BackendDB, Database},
+    };
     use chrono::Utc;
     use serial_test::serial;
-    use crate::{db::{BackendDB, Database}, config::DBConfig};
 
     use super::*;
 
@@ -72,7 +74,7 @@ mod tests {
 
         cleanup(&db.conn().unwrap());
 
-        let data = NewChain{
+        let data = NewChain {
             chain_id: "gaia".to_string(),
             chain_name: "gaia".to_string(),
             inserted_at: NaiveDateTime::from_timestamp(Utc::now().timestamp(), 0),
@@ -98,7 +100,7 @@ mod tests {
 
         cleanup(&db.conn().unwrap());
 
-        let data = NewChain{
+        let data = NewChain {
             chain_id: "gaia".to_string(),
             chain_name: "gaia".to_string(),
             inserted_at: NaiveDateTime::from_timestamp(Utc::now().timestamp(), 0),

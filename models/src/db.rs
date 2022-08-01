@@ -18,13 +18,14 @@ impl BackendDB {
         return BackendDB {
             config: config,
             client: None,
-        }
+        };
     }
 }
 
 impl Database for BackendDB {
     fn connect(&mut self) -> Result<bool, Box<dyn std::error::Error>> {
-        let db_url = format!("postgres://{}:{}@{}:{}/{}",
+        let db_url = format!(
+            "postgres://{}:{}@{}:{}/{}",
             self.config.user,
             self.config.password,
             self.config.host,
@@ -35,7 +36,7 @@ impl Database for BackendDB {
         let manager = ConnectionManager::<PgConnection>::new(db_url.clone());
         let pool = Pool::new(manager)
             .expect(format!("failed to conect to the database: {}", db_url).as_str());
-        
+
         self.client = Some(pool);
 
         Ok(true)
