@@ -8,6 +8,4 @@ use serde::{Deserialize, Serialize};
 use crate::errors::DBModelError;
 
 #[derive(Debug, Queryable, Serialize)]
-pub struct Event {
-    
-}
+pub struct Event {}

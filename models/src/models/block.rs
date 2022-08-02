@@ -27,4 +27,3 @@ pub struct Block {
     inserted_at: NaiveDateTime,
     updated_at: Option<NaiveDateTime>,
 }
-
