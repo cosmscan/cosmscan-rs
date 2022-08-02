@@ -31,6 +31,12 @@ impl Chain {
     pub fn count_all(conn: &PgConnection) -> Result<i64, DBModelError> {
         all_chains.count().get_result(conn).map_err(|e| e.into())
     }
+
+    pub fn find_by_chain_id(conn: &PgConnection, chain_id: String) -> Result<Chain, DBModelError> {
+        all_chains.filter(chains::chain_id.eq(chain_id))
+            .first::<Chain>(conn)
+            .map_err(|e| e.into())
+    }
 }
 
 #[derive(Insertable, Deserialize, Serialize)]
