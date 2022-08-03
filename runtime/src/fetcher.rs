@@ -3,7 +3,7 @@ use futures::future;
 use log::{error, info};
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::Duration;
 use tendermint::abci::transaction::Hash;
 use tendermint::block::Height;
@@ -31,7 +31,12 @@ impl FetcherApp {
         let start_block = Height::from(self.config.start_block);
         let client = HttpClient::new(self.config.tendermint_rpc.as_str())
             .map(|c| Arc::new(c))
-            .unwrap_or_else(|_| panic!("failed to connect to the tendermint rpc, endpoint: {}", self.config.tendermint_rpc));
+            .unwrap_or_else(|_| {
+                panic!(
+                    "failed to connect to the tendermint rpc, endpoint: {}",
+                    self.config.tendermint_rpc
+                )
+            });
 
         // start from current block
         let mut current_block = start_block.clone();

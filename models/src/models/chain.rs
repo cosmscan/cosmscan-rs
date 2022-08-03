@@ -33,7 +33,8 @@ impl Chain {
     }
 
     pub fn find_by_chain_id(conn: &PgConnection, chain_id: String) -> Result<Chain, DBModelError> {
-        all_chains.filter(chains::chain_id.eq(chain_id))
+        all_chains
+            .filter(chains::chain_id.eq(chain_id))
             .first::<Chain>(conn)
             .map_err(|e| e.into())
     }
@@ -61,26 +62,21 @@ mod tests {
     use crate::{
         config::DBConfig,
         db::{BackendDB, Database},
+        models::test_helpers::cleanup_db,
     };
     use chrono::Utc;
     use serial_test::serial;
 
     use super::*;
 
-    fn cleanup(conn: &PgConnection) {
-        diesel::delete(all_chains)
-            .execute(conn)
-            .expect("failed to cleanup database");
-    }
-
     #[test]
     #[serial]
     fn test_insert() {
         let mut db = BackendDB::new(DBConfig::default());
-        let result = db.connect().unwrap();
+        let result = db.connect();
         assert_eq!(result, true);
 
-        cleanup(&db.conn().unwrap());
+        cleanup_db(&db.conn().unwrap());
 
         let data = NewChain {
             chain_id: "gaia".to_string(),
@@ -103,10 +99,10 @@ mod tests {
     #[serial]
     fn test_query() {
         let mut db = BackendDB::new(DBConfig::default());
-        let result = db.connect().unwrap();
+        let result = db.connect();
         assert_eq!(result, true);
 
-        cleanup(&db.conn().unwrap());
+        cleanup_db(&db.conn().unwrap());
 
         let data = NewChain {
             chain_id: "gaia".to_string(),
