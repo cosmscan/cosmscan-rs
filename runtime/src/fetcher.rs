@@ -1,6 +1,17 @@
-use crate::config::FetcherConfig;
+use crate::{
+    config::{ChainConfig, Config},
+    utils::current_time,
+};
+use cosmoscout_models::{
+    db::{BackendDB, Database},
+    errors::DBModelError,
+    models::{
+        block::Block,
+        chain::{Chain, NewChain},
+    },
+};
 use futures::future;
-use log::{error, info};
+use log::{debug, error, info, warn};
 use sha2::{Digest, Sha256};
 use std::str::FromStr;
 use std::sync::Arc;
@@ -12,34 +23,62 @@ use tokio::time::sleep;
 
 /// FetcherApp is for fetching ABCI blocks, transactions and logs.
 pub struct FetcherApp {
-    pub config: FetcherConfig,
+    pub config: Config,
+    pub db: BackendDB,
 }
 
 impl FetcherApp {
-    pub fn new(config: FetcherConfig) -> Self {
-        FetcherApp { config }
+    pub fn new(config: Config) -> Self {
+        let mut db = BackendDB::new(config.db.clone());
+        let connected = db.connect();
+        if !connected {
+            panic!("unable to connect to the database");
+        }
+
+        FetcherApp { config, db }
     }
 
     pub async fn start(&self) {
         info!("fetcher app started to process");
+        let fetcher_config = &self.config.fetcher;
 
-        if self.config.start_block == 0 {
+        if fetcher_config.start_block == 0 {
             panic!("start block must be greater than 0");
         }
 
+        // insert new chain if not exists
+        self.insert_chain_config(&self.config.chain);
+
         // connect to the tendermint rpc server
-        let start_block = Height::from(self.config.start_block);
-        let client = HttpClient::new(self.config.tendermint_rpc.as_str())
+        let start_block = Height::from(fetcher_config.start_block);
+        let client = HttpClient::new(fetcher_config.tendermint_rpc.as_str())
             .map(|c| Arc::new(c))
             .unwrap_or_else(|_| {
                 panic!(
                     "failed to connect to the tendermint rpc, endpoint: {}",
-                    self.config.tendermint_rpc
+                    fetcher_config.tendermint_rpc
                 )
             });
 
         // start from current block
         let mut current_block = start_block.clone();
+
+        // fetch latest block heights
+        if fetcher_config.try_resume_from_db {
+            let chain =
+                Chain::find_by_chain_id(&self.db.conn().unwrap(), fetcher_config.chain_id.as_str())
+                    .unwrap_or_else(|_| panic!("failed to get chain information from db"));
+
+            let latest_block_height =
+                Block::latest_block_height(&self.db.conn().unwrap(), chain.id);
+            match latest_block_height {
+                Ok(height) => {
+                    info!("fetcher resumed block height from db {}", height);
+                    current_block = Height::from(height as u32);
+                }
+                Err(_) => warn!("failed to fetch latest block height from db"),
+            }
+        }
         info!("start to listen blocks from `{}` height", current_block);
 
         loop {
@@ -112,5 +151,29 @@ impl FetcherApp {
         hasher.update(data);
         let tx_hash = hasher.finalize();
         format!("{:X}", tx_hash)
+    }
+
+    /// save chain config if it doesn't exists
+    fn insert_chain_config(&self, chain_config: &ChainConfig) {
+        let db = &self.db;
+
+        let chain = Chain::find_by_chain_id(&db.conn().unwrap(), chain_config.chain_id.as_str());
+        match chain {
+            Ok(_) => debug!("chain already registered"),
+            Err(e) => match e {
+                DBModelError::NotFound => {
+                    NewChain::insert(
+                        &NewChain {
+                            chain_id: chain_config.chain_id.clone(),
+                            chain_name: chain_config.chain_name.clone(),
+                            inserted_at: current_time(),
+                        },
+                        &db.conn().unwrap(),
+                    )
+                    .unwrap_or_else(|e| panic!("failed to insert chain information: {:?}", e));
+                }
+                _ => panic!("unknown error during fetching chain infroation, {:?}", e),
+            },
+        }
     }
 }

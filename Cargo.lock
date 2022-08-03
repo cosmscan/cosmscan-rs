@@ -1234,6 +1234,7 @@ name = "runtime"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "chrono",
  "clap",
  "cosmoscout-models",
  "env_logger",

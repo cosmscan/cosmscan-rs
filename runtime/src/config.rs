@@ -6,11 +6,21 @@ use std::fs;
 #[derive(Debug, PartialEq, Deserialize)]
 pub struct Config {
     pub fetcher: FetcherConfig,
+    pub chain: ChainConfig,
     pub db: DBConfig,
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+pub struct ChainConfig {
+    pub chain_id: String,
+    pub chain_name: String,
+    pub icon_url: Option<String>,
+    pub website: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct FetcherConfig {
+    pub chain_id: String,
     pub tendermint_rpc: String,
     pub cosmos_rest: String,
     pub start_block: u32,
@@ -35,6 +45,7 @@ mod tests {
         assert_eq!(
             config.fetcher,
             FetcherConfig {
+                chain_id: "gaia".to_string(),
                 tendermint_rpc: "http://localhost:26657/".to_string(),
                 cosmos_rest: "http://localhost:1317/".to_string(),
                 start_block: 1,

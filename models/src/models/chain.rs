@@ -32,7 +32,7 @@ impl Chain {
         all_chains.count().get_result(conn).map_err(|e| e.into())
     }
 
-    pub fn find_by_chain_id(conn: &PgConnection, chain_id: String) -> Result<Chain, DBModelError> {
+    pub fn find_by_chain_id(conn: &PgConnection, chain_id: &str) -> Result<Chain, DBModelError> {
         all_chains
             .filter(chains::chain_id.eq(chain_id))
             .first::<Chain>(conn)
