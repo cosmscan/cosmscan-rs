@@ -10,29 +10,29 @@ use crate::schema::events;
 
 #[derive(Debug, Queryable, Serialize, Deserialize)]
 pub struct Event {
-    id: i32,
-    chain_id: i32,
-    tx_type: i16,
-    tx_hash: Option<String>,
-    event_type: String,
-    event_key: String,
-    event_value: String,
-    indexed: bool,
-    inserted_at: NaiveDateTime,
-    updated_at: Option<NaiveDateTime>,
+    pub id: i32,
+    pub chain_id: i32,
+    pub tx_type: i16,
+    pub tx_hash: Option<String>,
+    pub event_type: String,
+    pub event_key: String,
+    pub event_value: String,
+    pub indexed: bool,
+    pub inserted_at: NaiveDateTime,
+    pub updated_at: Option<NaiveDateTime>,
 }
 
 #[derive(Debug, Insertable, Serialize, Deserialize)]
 #[table_name = "events"]
 pub struct NewEvent {
-    chain_id: i32,
-    tx_type: i16,
-    tx_hash: Option<String>,
-    event_type: String,
-    event_key: String,
-    event_value: String,
-    indexed: bool,
-    inserted_at: NaiveDateTime,
+    pub chain_id: i32,
+    pub tx_type: i16,
+    pub tx_hash: Option<String>,
+    pub event_type: String,
+    pub event_key: String,
+    pub event_value: String,
+    pub indexed: bool,
+    pub inserted_at: NaiveDateTime,
 }
 
 impl NewEvent {

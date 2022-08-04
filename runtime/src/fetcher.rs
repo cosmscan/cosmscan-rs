@@ -1,12 +1,12 @@
 use crate::{
     config::{ChainConfig, Config},
-    utils::current_time,
+    utils::current_time, extension::NewBlockSchema, errors::FetchError,
 };
 use cosmoscout_models::{
     db::{BackendDB, Database},
     errors::DBModelError,
     models::{
-        block::Block,
+        block::{Block, NewBlock},
         chain::{Chain, NewChain},
     },
 };
@@ -52,33 +52,15 @@ impl FetcherApp {
         // connect to the tendermint rpc server
         let start_block = Height::from(fetcher_config.start_block);
         let client = HttpClient::new(fetcher_config.tendermint_rpc.as_str())
-            .map(|c| Arc::new(c))
+            .map(Arc::<HttpClient>::new)
             .unwrap_or_else(|_| {
                 panic!(
                     "failed to connect to the tendermint rpc, endpoint: {}",
                     fetcher_config.tendermint_rpc
                 )
             });
-
-        // start from current block
-        let mut current_block = start_block.clone();
-
-        // fetch latest block heights
-        if fetcher_config.try_resume_from_db {
-            let chain =
-                Chain::find_by_chain_id(&self.db.conn().unwrap(), fetcher_config.chain_id.as_str())
-                    .unwrap_or_else(|_| panic!("failed to get chain information from db"));
-
-            let latest_block_height =
-                Block::latest_block_height(&self.db.conn().unwrap(), chain.id);
-            match latest_block_height {
-                Ok(height) => {
-                    info!("fetcher resumed block height from db {}", height);
-                    current_block = Height::from(height as u32);
-                }
-                Err(_) => warn!("failed to fetch latest block height from db"),
-            }
-        }
+       
+        let mut current_block = self.get_start_block(start_block, fetcher_config.chain_id.as_str(), fetcher_config.try_resume_from_db);
         info!("start to listen blocks from `{}` height", current_block);
 
         loop {
@@ -99,7 +81,7 @@ impl FetcherApp {
         &self,
         client: Arc<HttpClient>,
         block_height: Height,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<bool, FetchError> {
         let block = client.block(block_height).await?;
         info!(
             "block fetched hash {:?}, block_number: {}",
@@ -122,27 +104,56 @@ impl FetcherApp {
                 async move { t_client.tx(hash_wrapped, false).await }
             });
 
+        // one of action for fetching transaction could fail
         let fetch_txs_result = future::join_all(future_fetch_txes).await;
-
-        info!(
-            "block_result: {:?}, fetch_tx_result: {:?}",
-            block_results, fetch_txs_result
-        );
-
-        // if one of transaction failed, then it should return error
-        let has_error = fetch_txs_result
-            .iter()
-            .filter_map(|x| match x {
-                Ok(_) => None,
-                Err(err) => Some(err),
-            })
-            .collect::<Vec<_>>();
-
-        if has_error.len() > 0 {
-            return Err(has_error[0].clone().into());
+        let (ok, err):(Vec<_>, Vec<_>) = fetch_txs_result.into_iter()
+            .partition(|e| e.is_ok());
+        
+        if err.len() > 0 {
+            return Err(FetchError::FetchingTransactionFailed);
         }
 
-        Ok(())
+        let txes = ok.into_iter()
+            .map(|x| x.unwrap())
+            .collect::<Vec<_>>();
+
+        let conn = self.db.conn()
+            .unwrap_or_else(|| panic!("cannot get database connection, we may losse it?"));
+
+        conn.build_transaction()
+            .repeatable_read()
+            .run::<bool, DBModelError, _>(|| {
+                NewBlock::insert(&conn, &NewBlockSchema::from(block.block).into())?;
+
+                Ok(true)
+            })
+            .map_err(|e| e.into())
+    }
+
+    /// resume start block from db
+    fn get_start_block(&self, start_block: Height, chain_id: &str, try_resume_from_db: bool) -> Height {
+         // fetch latest block heights
+         if try_resume_from_db {
+             let chain =
+                 Chain::find_by_chain_id(&self.db.conn().unwrap(), chain_id)
+                     .unwrap_or_else(|_| panic!("failed to get chain information from db"));
+ 
+             let latest_block_height =
+                 Block::latest_block_height(&self.db.conn().unwrap(), chain.id);
+ 
+             match latest_block_height {
+                 Ok(height) => {
+                     info!("fetcher resumed block height from db {}", height);
+                     Height::from(height as u32)
+                 }
+                 Err(_) => {
+                    warn!("failed to fetch latest block height from db");
+                    start_block
+                 }
+             }
+         } else {
+            start_block
+         }
     }
 
     /// convert block.data into transaction hash

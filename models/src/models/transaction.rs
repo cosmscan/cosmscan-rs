@@ -10,39 +10,39 @@ use crate::schema::transactions;
 
 #[derive(Debug, Queryable, Serialize, Deserialize)]
 pub struct Transaction {
-    id: i32,
-    chain_id: i32,
-    transaction_hash: String,
-    height: i64,
-    code: Option<i32>,
-    code_space: Option<String>,
-    tx_data: Option<String>,
-    raw_log: Option<String>,
-    info: Option<String>,
-    memo: Option<String>,
-    gas_wanted: i64,
-    gas_used: i64,
-    tx_date: Option<String>,
-    inserted_at: NaiveDateTime,
-    updated_at: Option<NaiveDateTime>,
+    pub id: i32,
+    pub chain_id: i32,
+    pub transaction_hash: String,
+    pub height: i64,
+    pub code: Option<i32>,
+    pub code_space: Option<String>,
+    pub tx_data: Option<String>,
+    pub raw_log: Option<String>,
+    pub info: Option<String>,
+    pub memo: Option<String>,
+    pub gas_wanted: i64,
+    pub gas_used: i64,
+    pub tx_date: Option<String>,
+    pub inserted_at: NaiveDateTime,
+    pub updated_at: Option<NaiveDateTime>,
 }
 
 #[derive(Debug, Insertable, Serialize, Deserialize)]
 #[table_name = "transactions"]
 pub struct NewTransaction {
-    chain_id: i32,
-    transaction_hash: String,
-    height: i64,
-    code: Option<i32>,
-    code_space: Option<String>,
-    tx_data: Option<String>,
-    raw_log: Option<String>,
-    info: Option<String>,
-    memo: Option<String>,
-    gas_wanted: i64,
-    gas_used: i64,
-    tx_date: Option<String>,
-    inserted_at: NaiveDateTime,
+    pub chain_id: i32,
+    pub transaction_hash: String,
+    pub height: i64,
+    pub code: Option<i32>,
+    pub code_space: Option<String>,
+    pub tx_data: Option<String>,
+    pub raw_log: Option<String>,
+    pub info: Option<String>,
+    pub memo: Option<String>,
+    pub gas_wanted: i64,
+    pub gas_used: i64,
+    pub tx_date: Option<String>,
+    pub inserted_at: NaiveDateTime,
 }
 
 impl NewTransaction {
@@ -57,6 +57,7 @@ impl NewTransaction {
 #[cfg(test)]
 mod tests {
     use chrono::Utc;
+    use serial_test::serial;
 
     use crate::{
         config::DBConfig,
@@ -67,6 +68,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[serial]
     fn test_insert_tx() {
         let mut db = BackendDB::new(DBConfig::default());
         let connected = db.connect();

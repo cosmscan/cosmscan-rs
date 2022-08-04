@@ -11,23 +11,23 @@ use crate::schema::blocks::dsl::blocks as all_blocks;
 
 #[derive(Debug, Queryable, Serialize, Deserialize)]
 pub struct Block {
-    id: i32,
-    chain_id: i32,
-    height: i64,
-    block_hash: String,
-    prev_hash: String,
-    proposer_address: String,
-    last_commit_hash: String,
-    data_hash: String,
-    validators_hash: String,
-    next_validators_hash: String,
-    consensus_hash: String,
-    app_hash: String,
-    last_result_hash: String,
-    evidence_hash: String,
-    block_time: NaiveDateTime,
-    inserted_at: NaiveDateTime,
-    updated_at: Option<NaiveDateTime>,
+    pub id: i32,
+    pub chain_id: i32,
+    pub height: i64,
+    pub block_hash: String,
+    pub prev_hash: String,
+    pub proposer_address: String,
+    pub last_commit_hash: String,
+    pub data_hash: String,
+    pub validators_hash: String,
+    pub next_validators_hash: String,
+    pub consensus_hash: String,
+    pub app_hash: String,
+    pub last_result_hash: String,
+    pub evidence_hash: String,
+    pub block_time: NaiveDateTime,
+    pub inserted_at: NaiveDateTime,
+    pub updated_at: Option<NaiveDateTime>,
 }
 
 impl Block {
@@ -45,21 +45,21 @@ impl Block {
 #[derive(Debug, Clone, Insertable, Serialize, Deserialize)]
 #[table_name = "blocks"]
 pub struct NewBlock {
-    chain_id: i32,
-    height: i64,
-    block_hash: String,
-    prev_hash: String,
-    proposer_address: String,
-    last_commit_hash: String,
-    data_hash: String,
-    validators_hash: String,
-    next_validators_hash: String,
-    consensus_hash: String,
-    app_hash: String,
-    last_result_hash: String,
-    evidence_hash: String,
-    block_time: NaiveDateTime,
-    inserted_at: NaiveDateTime,
+    pub chain_id: i32,
+    pub height: i64,
+    pub block_hash: String,
+    pub prev_hash: String,
+    pub proposer_address: String,
+    pub last_commit_hash: String,
+    pub data_hash: String,
+    pub validators_hash: String,
+    pub next_validators_hash: String,
+    pub consensus_hash: String,
+    pub app_hash: String,
+    pub last_result_hash: String,
+    pub evidence_hash: String,
+    pub block_time: NaiveDateTime,
+    pub inserted_at: NaiveDateTime,
 }
 
 impl NewBlock {
@@ -74,6 +74,7 @@ impl NewBlock {
 #[cfg(test)]
 mod tests {
     use chrono::{NaiveDateTime, Utc};
+    use serial_test::serial;
 
     use crate::{
         config::DBConfig,
@@ -85,6 +86,7 @@ mod tests {
     };
 
     #[test]
+    #[serial]
     fn insert_new_block() {
         let mut db = BackendDB::new(DBConfig::default());
         let connected = db.connect();
