@@ -14,8 +14,7 @@ $ cargo install diesel_cli --no-default-features --features postgres
 # or 
 $ cargo install diesel_cli --no-default-features --features sqlite
 
-$ cd models
-$ diesel migration run
+$ cd models && diesel migration run && cd ..
 
 # or
 $ diesel migration redo
