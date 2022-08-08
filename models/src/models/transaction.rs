@@ -3,6 +3,7 @@ use diesel::prelude::*;
 use diesel::Insertable;
 use diesel::PgConnection;
 use diesel::Queryable;
+use diesel::sql_types::Binary;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::DBModelError;
@@ -14,9 +15,9 @@ pub struct Transaction {
     pub chain_id: i32,
     pub transaction_hash: String,
     pub height: i64,
-    pub code: Option<i32>,
-    pub code_space: Option<String>,
-    pub tx_data: Option<String>,
+    pub code: i32,
+    pub code_space: String,
+    pub tx_data: Vec<u8>,
     pub raw_log: Option<String>,
     pub info: Option<String>,
     pub memo: Option<String>,
@@ -33,9 +34,9 @@ pub struct NewTransaction {
     pub chain_id: i32,
     pub transaction_hash: String,
     pub height: i64,
-    pub code: Option<i32>,
-    pub code_space: Option<String>,
-    pub tx_data: Option<String>,
+    pub code: i32,
+    pub code_space: String,
+    pub tx_data: Vec<u8>,
     pub raw_log: Option<String>,
     pub info: Option<String>,
     pub memo: Option<String>,
@@ -81,9 +82,9 @@ mod tests {
                 chain_id: 1,
                 transaction_hash: "0000txhash".to_string(),
                 height: 25,
-                code: Some(1),
-                code_space: Some("0000codespace".to_string()),
-                tx_data: None,
+                code: 1,
+                code_space: "0000codespace".to_string(),
+                tx_data: vec![],
                 raw_log: Some("{ raw_logs }".to_string()),
                 info: None,
                 memo: None,

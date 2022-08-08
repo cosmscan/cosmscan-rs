@@ -1,4 +1,5 @@
 use clap::Parser;
+use env_logger::Env;
 use runtime::config::Config;
 use runtime::fetcher::FetcherApp;
 
@@ -11,7 +12,7 @@ struct Cli {
 
 #[tokio::main]
 async fn main() {
-    env_logger::init();
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
 
     let cli: Cli = Cli::parse();
     let config = Config::from_file(cli.filename.clone())
@@ -20,3 +21,4 @@ async fn main() {
     let fetcher = FetcherApp::new(config);
     fetcher.start().await;
 }
+  

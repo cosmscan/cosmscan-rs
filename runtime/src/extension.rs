@@ -1,11 +1,13 @@
 use std::str::FromStr;
 
 use chrono::{NaiveDateTime, Utc};
-use cosmoscout_models::models::block::NewBlock;
+use cosmoscout_models::models::{block::NewBlock, transaction::NewTransaction};
 use log::info;
-use tendermint::block::Block;
+use tendermint::{block::Block, abci::Code};
+use tendermint_rpc::endpoint::tx;
 
 pub struct NewBlockSchema(NewBlock);
+pub struct NewTxSchema(NewTransaction);
 
 impl From<Block> for NewBlockSchema {
     fn from(block: Block) -> Self {
@@ -36,9 +38,40 @@ impl From<Block> for NewBlockSchema {
     }
 }
 
+impl From<tx::Response> for NewTxSchema {
+    fn from(tx: tx::Response) -> Self {
+        let code = match tx.tx_result.code {
+            Code::Ok => 0,
+            Code::Err(err) => err,
+        };
+
+        NewTxSchema(NewTransaction {
+            chain_id: 0,
+            transaction_hash: tx.hash.to_string(),
+            height: tx.height.into(),
+            code: code as i32,
+            code_space: tx.tx_result.codespace.to_string(),
+            tx_data: tx.tx_result.data.value().to_owned(),
+            raw_log: Some(tx.tx_result.log.value().to_owned()),
+            info: Some(tx.tx_result.info.to_string()),
+            memo: None,
+            gas_wanted: tx.tx_result.gas_wanted.value() as i64,
+            gas_used: tx.tx_result.gas_used.value() as i64,
+            tx_date: None,
+            inserted_at: NaiveDateTime::from_timestamp(Utc::now().timestamp(), 0),
+        })
+    }
+}
+
 impl From<NewBlockSchema> for NewBlock {
     fn from(block: NewBlockSchema) -> Self {
         block.0
+    }
+}
+
+impl From<NewTxSchema> for NewTransaction {
+    fn from(tx: NewTxSchema) -> Self {
+        tx.0
     }
 }
 

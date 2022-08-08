@@ -1,13 +1,13 @@
 use crate::{
     config::{ChainConfig, Config},
-    utils::current_time, extension::NewBlockSchema, errors::FetchError,
+    utils::current_time, extension::{NewBlockSchema, NewTxSchema}, errors::FetchError,
 };
 use cosmoscout_models::{
     db::{BackendDB, Database},
     errors::DBModelError,
     models::{
         block::{Block, NewBlock},
-        chain::{Chain, NewChain},
+        chain::{Chain, NewChain}, transaction::NewTransaction,
     },
 };
 use futures::future;
@@ -40,6 +40,7 @@ impl FetcherApp {
 
     pub async fn start(&self) {
         info!("fetcher app started to process");
+        let mut retry_count = 0;
         let fetcher_config = &self.config.fetcher;
 
         if fetcher_config.start_block == 0 {
@@ -48,6 +49,10 @@ impl FetcherApp {
 
         // insert new chain if not exists
         self.insert_chain_config(&self.config.chain);
+        let chain = Chain::find_by_chain_id(&self.db.conn().unwrap(), &self.config.chain.chain_id)
+            .unwrap_or_else(|_| {
+                panic!("failed to fetch chain information");
+            });
 
         // connect to the tendermint rpc server
         let start_block = Height::from(fetcher_config.start_block);
@@ -57,21 +62,26 @@ impl FetcherApp {
                 panic!(
                     "failed to connect to the tendermint rpc, endpoint: {}",
                     fetcher_config.tendermint_rpc
-                )
+                );
             });
        
         let mut current_block = self.get_start_block(start_block, fetcher_config.chain_id.as_str(), fetcher_config.try_resume_from_db);
-        info!("start to listen blocks from `{}` height", current_block);
+        info!("start to listen blocks from height `{}`", current_block);
 
         loop {
             let client = client.clone();
-            match self.fetch_and_save_block(client, current_block).await {
+            match self.fetch_and_save_block(client, current_block, chain.id).await {
                 Ok(_) => {
+                    retry_count = 0;
                     current_block = current_block.increment();
                 }
                 Err(e) => {
-                    error!("unexpected error during fetching blockchain: {:?}", e);
-                    sleep(Duration::from_millis(200)).await;
+                    if retry_count > 10 {
+                        error!("unexpected error during fetching blockchain: {:?}", e);
+                        panic!("teardown the fetcher");
+                    }
+                    sleep(Duration::from_millis(1000)).await;
+                    retry_count += 1;
                 }
             }
         }
@@ -81,6 +91,7 @@ impl FetcherApp {
         &self,
         client: Arc<HttpClient>,
         block_height: Height,
+        chain_id: i32,
     ) -> Result<bool, FetchError> {
         let block = client.block(block_height).await?;
         info!(
@@ -123,7 +134,15 @@ impl FetcherApp {
         conn.build_transaction()
             .repeatable_read()
             .run::<bool, DBModelError, _>(|| {
-                NewBlock::insert(&conn, &NewBlockSchema::from(block.block).into())?;
+                let mut new_block:NewBlock = NewBlockSchema::from(block.block).into();
+                new_block.chain_id = chain_id;
+                NewBlock::insert(&conn, &new_block)?;
+
+                for tx in txes.into_iter() {
+                    let mut new_tx: NewTransaction = NewTxSchema::from(tx).into();
+                    new_tx.chain_id = chain_id;
+                    NewTransaction::insert(&conn, &new_tx)?;
+                }
 
                 Ok(true)
             })
@@ -144,7 +163,7 @@ impl FetcherApp {
              match latest_block_height {
                  Ok(height) => {
                      info!("fetcher resumed block height from db {}", height);
-                     Height::from(height as u32)
+                     Height::from(height as u32).increment()
                  }
                  Err(_) => {
                     warn!("failed to fetch latest block height from db");

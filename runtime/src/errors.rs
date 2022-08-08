@@ -1,4 +1,5 @@
 use cosmoscout_models::errors::DBModelError;
+use tendermint_rpc::{ResponseError, error::ErrorDetail};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -10,5 +11,19 @@ pub enum FetchError {
     DBError(#[from] DBModelError),
 
     #[error("failed to conenct with tendermint rpc client")]
-    RPCError(#[from] tendermint_rpc::Error)
+    RPCError(tendermint_rpc::Error),
+    
+    #[error("unknown server error")]
+    UnknownServerError(tendermint_rpc::Error)
+}
+
+impl From<tendermint_rpc::Error> for FetchError {
+    fn from(err: tendermint_rpc::Error) -> Self {
+        match err.clone() {
+            tendermint_rpc::Error(ErrorDetail::Response(_), _) => {
+                FetchError::RPCError(err)
+            },
+            _ => FetchError::UnknownServerError(err)
+        }
+    }
 }
