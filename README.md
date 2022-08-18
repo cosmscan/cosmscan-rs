@@ -10,14 +10,6 @@ $ sudo apt install libpq-dev
 
 # install diesel
 $ cargo install diesel_cli --no-default-features --features postgres
-
-# or 
-$ cargo install diesel_cli --no-default-features --features sqlite
-
-$ cd models && diesel migration run && cd ..
-
-# or
-$ diesel migration redo
 ```
 
 ### Run on localhost for test
@@ -31,4 +23,9 @@ $ cd models && diesel migration run && cd ..
 
 # this start to run explorer runtime application
 $ RUST_LOG=info cargo run --bin fetcher -- --filename config.toml
+```
+
+### Revoke migration
+```shell
+$ diesel migration redo
 ```
