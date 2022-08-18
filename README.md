@@ -23,7 +23,11 @@ $ diesel migration redo
 ### Run on localhost for test
 ```shell
 # this command runs simple gaiad app & postgres database
-$ docker-compose up
+# when you run services via this scripts, sample tx will be automatically sent every seconds.
+$ docker-compose -f docker-compose.flood.yml up
+
+# migrate schema
+$ cd models && diesel migration run && cd ..
 
 # this start to run explorer runtime application
 $ RUST_LOG=info cargo run --bin fetcher -- --filename config.toml

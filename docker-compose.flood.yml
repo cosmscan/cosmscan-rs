@@ -43,8 +43,6 @@ services:
     environment:
       POSTGRES_USER: "cosmoscout"
       POSTGRES_PASSWORD: "cosmoscout"
-    volumes:
-      - ./internal/db/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
   adminer:
     image: adminer
     restart: always
