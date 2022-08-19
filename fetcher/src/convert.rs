@@ -1,8 +1,7 @@
 use chrono::{NaiveDateTime, Utc};
-use cosmos_sdk_proto::cosmos::{base::abci::v1beta1::TxResponse, tx::v1beta1::GetTxResponse};
+use cosmos_sdk_proto::cosmos::tx::v1beta1::GetTxResponse;
 use cosmoscout_models::models::{block::NewBlock, transaction::NewTransaction};
-use tendermint::{abci::Code, block::Block};
-use tendermint_rpc::endpoint::tx;
+use tendermint::block::Block;
 
 use crate::utils::current_time;
 
@@ -53,22 +52,21 @@ impl From<Block> for NewBlockSchema {
 
 impl From<&GetTxResponse> for NewTxSchema {
     fn from(tx: &GetTxResponse) -> Self {
-        let tx_response = tx.tx_response.unwrap();
-        let tx_body = tx.tx.unwrap();
+        let tx_response = tx.tx_response.as_ref().unwrap();
 
         NewTxSchema(NewTransaction {
             chain_id: 0,
-            transaction_hash: tx_response.txhash,
+            transaction_hash: tx_response.txhash.clone(),
             height: tx_response.height,
             code: tx_response.code as i32,
-            code_space: tx_response.codespace,
-            tx_data: tx_response.data,
-            raw_log: tx_response.raw_log,
-            info: tx_response.info,
+            code_space: tx_response.codespace.clone(),
+            tx_data: tx_response.data.clone(),
+            raw_log: tx_response.raw_log.clone(),
+            info: tx_response.info.clone(),
             memo: None,
             gas_wanted: tx_response.gas_wanted,
             gas_used: tx_response.gas_used,
-            tx_date: Some(tx_response.timestamp),
+            tx_timestamp: tx_response.timestamp.clone(),
             inserted_at: NaiveDateTime::from_timestamp(Utc::now().timestamp(), 0),
         })
     }

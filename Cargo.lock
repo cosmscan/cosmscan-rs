@@ -1425,20 +1425,12 @@ dependencies = [
 name = "runtime"
 version = "0.1.0"
 dependencies = [
- "async-trait",
- "chrono",
  "clap",
  "cosmoscout-fetcher",
  "cosmoscout-models",
  "env_logger",
- "futures",
  "log",
- "reqwest",
  "serde",
- "sha2 0.10.2",
- "tendermint",
- "tendermint-rpc",
- "thiserror",
  "tokio",
  "toml",
 ]

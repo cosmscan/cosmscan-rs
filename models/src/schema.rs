@@ -55,21 +55,16 @@ table! {
         height -> Int8,
         code -> Int4,
         code_space -> Varchar,
-        tx_data -> Bytea,
-        raw_log -> Nullable<Text>,
-        info -> Nullable<Text>,
+        tx_data -> Text,
+        raw_log -> Text,
+        info -> Text,
         memo -> Nullable<Varchar>,
         gas_wanted -> Int8,
         gas_used -> Int8,
-        tx_date -> Nullable<Varchar>,
+        tx_timestamp -> Varchar,
         inserted_at -> Timestamp,
         updated_at -> Nullable<Timestamp>,
     }
 }
 
-allow_tables_to_appear_in_same_query!(
-    blocks,
-    chains,
-    events,
-    transactions,
-);
+allow_tables_to_appear_in_same_query!(blocks, chains, events, transactions,);

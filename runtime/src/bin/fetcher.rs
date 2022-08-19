@@ -18,7 +18,7 @@ async fn main() {
     let config = Config::from_file(cli.filename.clone())
         .unwrap_or_else(|_| panic!("wrong config file location: {}", cli.filename));
 
-    let fetcher = App::new(config);
+    let fetcher = App::new(config).await.unwrap();
     match fetcher.start().await {
         Ok(_) => {
             info!("fetcher app finished");

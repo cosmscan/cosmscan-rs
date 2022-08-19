@@ -1,13 +1,15 @@
 use crate::{
     config::{ChainConfig, Config},
+    convert::{NewBlockSchema, NewTxSchema},
     errors::Error,
-    extension::{NewBlockSchema, NewTxSchema},
     utils::{
         current_time, extract_begin_block_events, extract_end_block_events, extract_tx_events,
     },
 };
 
-use cosmos_sdk_proto::cosmos::tx::v1beta1::{Tx, service_client::ServiceClient, GetTxRequest, GetTxResponse};
+use cosmos_sdk_proto::cosmos::tx::v1beta1::{
+    service_client::ServiceClient, GetTxRequest, GetTxResponse,
+};
 use cosmoscout_models::{
     db::{BackendDB, Database},
     errors::DBModelError,
@@ -21,23 +23,21 @@ use cosmoscout_models::{
 use futures::future;
 use log::{debug, error, info, warn};
 use sha2::{Digest, Sha256};
-use tonic::transport::Channel;
-use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
-use tendermint::abci::transaction::Hash;
 use tendermint::block::Height;
 use tendermint_rpc::{
-    endpoint::{block, block_results, tx},
+    endpoint::{block, block_results},
     Client, HttpClient,
 };
-use tokio::time::sleep;
+use tokio::{sync::Mutex, time::sleep};
+use tonic::transport::Channel;
 
 /// App is for fetching ABCI blocks, transactions and logs.
 pub struct App {
     pub config: Config,
     pub db: BackendDB,
-    pub grpc_client: Arc<ServiceClient<Channel>>,
+    pub grpc_client: Arc<Mutex<ServiceClient<Channel>>>,
     pub tendermint_client: Arc<HttpClient>,
 }
 
@@ -51,14 +51,15 @@ impl App {
 
         let grpc_client = ServiceClient::connect(config.fetcher.cosmos_grpc.clone())
             .await
+            .map(Mutex::new)
             .map(Arc::new)?;
 
         let tendermint_client = HttpClient::new(config.fetcher.tendermint_rpc.as_str())
             .map(Arc::<HttpClient>::new)
             .map_err(|e| Error::from(e))?;
 
-        Ok(App { 
-            config, 
+        Ok(App {
+            config,
             db,
             grpc_client,
             tendermint_client,
@@ -89,10 +90,7 @@ impl App {
         info!("start to listen blocks from height `{}`", current_block);
 
         loop {
-            match self
-                .fetch_and_save_block(current_block, chain.id)
-                .await
-            {
+            match self.fetch_and_save_block(current_block, chain.id).await {
                 Ok(_) => {
                     retry_count = 0;
                     current_block = current_block.increment();
@@ -121,7 +119,8 @@ impl App {
             block_height
         );
 
-        let block_results: block_results::Response = self.tendermint_client.block_results(block_height).await?;
+        let block_results: block_results::Response =
+            self.tendermint_client.block_results(block_height).await?;
 
         // fetch all transactions
         let future_fetch_txes = block
@@ -130,12 +129,8 @@ impl App {
             .iter()
             .map(|tx| self.convert_txhash(tx))
             .map(|hash| {
-                let hash_wrapped = Hash::from_str(hash.as_str()).unwrap();
                 let t_client = self.grpc_client.clone();
-
-                async move { t_client.get_tx(GetTxRequest{
-                    hash,
-                }).await }
+                async move { t_client.lock().await.get_tx(GetTxRequest { hash }).await }
             });
 
         // one of action for fetching transaction could fail
@@ -181,17 +176,15 @@ impl App {
 
                 for tx in txes.into_iter() {
                     let inner_tx = tx.get_ref();
-                    let tx_body = inner_tx.tx.expect("tx body is empty in the response");
-                    let tx_response = inner_tx.tx_response.expect("tx response is empty");
 
                     // construct new events
-                    let tx_events = extract_tx_events(&tx_response, chain_id, &current_time);
+                    let tx_events = extract_tx_events(&inner_tx, chain_id, &current_time);
                     for event in tx_events {
                         NewEvent::insert(&conn, &event)?;
                     }
 
                     // store transction information
-                    let mut new_tx: NewTransaction = NewTxSchema::from(&tx_response).into();
+                    let mut new_tx: NewTransaction = NewTxSchema::from(inner_tx).into();
                     new_tx.chain_id = chain_id;
                     NewTransaction::insert(&conn, &new_tx)?;
                 }
