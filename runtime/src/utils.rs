@@ -1,19 +1,24 @@
-use std::borrow::Borrow;
-
 use chrono::{NaiveDateTime, Utc};
-use cosmoscout_models::models::event::{NewEvent, TX_TYPE_TRANSACTION, TX_TYPE_END_BLOCK, TX_TYPE_BEGIN_BLOCK};
-use tendermint_rpc::endpoint::{tx, block_results};
+use cosmoscout_models::models::event::{
+    NewEvent, TX_TYPE_BEGIN_BLOCK, TX_TYPE_END_BLOCK, TX_TYPE_TRANSACTION,
+};
+use tendermint_rpc::endpoint::{block_results, tx};
 
 pub fn current_time() -> NaiveDateTime {
     NaiveDateTime::from_timestamp(Utc::now().timestamp(), 0)
 }
 
 /// extract beging block events from block_results
-pub fn extract_begin_block_events(block_results: &block_results::Response, chain_id: i32, current_time: &NaiveDateTime) -> Vec<NewEvent> {
+pub fn extract_begin_block_events(
+    block_results: &block_results::Response,
+    chain_id: i32,
+    current_time: &NaiveDateTime,
+) -> Vec<NewEvent> {
     if let Some(events) = &block_results.begin_block_events {
-        events.iter()
+        events
+            .iter()
             .flat_map(|event| {
-                let mut result:Vec<NewEvent> = vec![];
+                let mut result: Vec<NewEvent> = vec![];
 
                 for attr in event.attributes.iter() {
                     result.push(NewEvent {
@@ -24,7 +29,7 @@ pub fn extract_begin_block_events(block_results: &block_results::Response, chain
                         event_key: attr.key.to_string(),
                         event_value: attr.value.to_string(),
                         indexed: false,
-                        inserted_at: current_time.clone(),
+                        inserted_at: *current_time,
                     });
                 }
 
@@ -37,11 +42,16 @@ pub fn extract_begin_block_events(block_results: &block_results::Response, chain
 }
 
 /// extract end block events from block_results
-pub fn extract_end_block_events(block_results: &block_results::Response, chain_id: i32, current_time: &NaiveDateTime) -> Vec<NewEvent> {
+pub fn extract_end_block_events(
+    block_results: &block_results::Response,
+    chain_id: i32,
+    current_time: &NaiveDateTime,
+) -> Vec<NewEvent> {
     if let Some(events) = &block_results.end_block_events {
-        events.iter()
+        events
+            .iter()
             .flat_map(|event| {
-                let mut result:Vec<NewEvent> = vec![];
+                let mut result: Vec<NewEvent> = vec![];
 
                 for attr in event.attributes.iter() {
                     result.push(NewEvent {
@@ -52,7 +62,7 @@ pub fn extract_end_block_events(block_results: &block_results::Response, chain_i
                         event_key: attr.key.to_string(),
                         event_value: attr.value.to_string(),
                         indexed: false,
-                        inserted_at: current_time.clone(),
+                        inserted_at: *current_time,
                     });
                 }
 
@@ -65,12 +75,16 @@ pub fn extract_end_block_events(block_results: &block_results::Response, chain_i
 }
 
 /// extract events from transaction
-pub fn extract_tx_events(tx: &tx::Response, chain_id: i32, current_time: &NaiveDateTime) -> Vec<NewEvent> {
+pub fn extract_tx_events(
+    tx: &tx::Response,
+    chain_id: i32,
+    current_time: &NaiveDateTime,
+) -> Vec<NewEvent> {
     tx.tx_result
         .events
         .iter()
         .flat_map(|event| {
-            let mut result:Vec<NewEvent> = vec![];
+            let mut result: Vec<NewEvent> = vec![];
 
             for attr in event.attributes.iter() {
                 result.push(NewEvent {
@@ -81,7 +95,7 @@ pub fn extract_tx_events(tx: &tx::Response, chain_id: i32, current_time: &NaiveD
                     event_key: attr.key.to_string(),
                     event_value: attr.value.to_string(),
                     indexed: false,
-                    inserted_at: current_time.clone(),
+                    inserted_at: *current_time,
                 });
             }
 

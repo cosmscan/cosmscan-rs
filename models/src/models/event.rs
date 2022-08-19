@@ -8,9 +8,9 @@ use serde::{Deserialize, Serialize};
 use crate::errors::DBModelError;
 use crate::schema::events;
 
-pub const TX_TYPE_TRANSACTION:i16 = 1;
-pub const TX_TYPE_BEGIN_BLOCK:i16 = 2;
-pub const TX_TYPE_END_BLOCK:i16 = 3;
+pub const TX_TYPE_TRANSACTION: i16 = 1;
+pub const TX_TYPE_BEGIN_BLOCK: i16 = 2;
+pub const TX_TYPE_END_BLOCK: i16 = 3;
 
 #[derive(Debug, Queryable, Serialize, Deserialize)]
 pub struct Event {

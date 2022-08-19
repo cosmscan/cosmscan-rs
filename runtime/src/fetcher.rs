@@ -1,14 +1,20 @@
 use crate::{
     config::{ChainConfig, Config},
-    utils::{current_time, extract_tx_events, extract_begin_block_events, extract_end_block_events}, extension::{NewBlockSchema, NewTxSchema}, errors::FetchError,
+    errors::FetchError,
+    extension::{NewBlockSchema, NewTxSchema},
+    utils::{
+        current_time, extract_begin_block_events, extract_end_block_events, extract_tx_events,
+    },
 };
-use chrono::{NaiveDateTime, Utc};
+
 use cosmoscout_models::{
     db::{BackendDB, Database},
     errors::DBModelError,
     models::{
         block::{Block, NewBlock},
-        chain::{Chain, NewChain}, transaction::NewTransaction, event::{NewEvent, TX_TYPE_TRANSACTION, TX_TYPE_BEGIN_BLOCK, TX_TYPE_END_BLOCK},
+        chain::{Chain, NewChain},
+        event::NewEvent,
+        transaction::NewTransaction,
     },
 };
 use futures::future;
@@ -19,7 +25,10 @@ use std::sync::Arc;
 use std::time::Duration;
 use tendermint::abci::transaction::Hash;
 use tendermint::block::Height;
-use tendermint_rpc::{Client, HttpClient, endpoint::{tx, block, block_results}};
+use tendermint_rpc::{
+    endpoint::{block, block_results, tx},
+    Client, HttpClient,
+};
 use tokio::time::sleep;
 
 /// FetcherApp is for fetching ABCI blocks, transactions and logs.
@@ -45,7 +54,7 @@ impl FetcherApp {
         let fetcher_config = &self.config.fetcher;
 
         if fetcher_config.start_block == 0 {
-            return Err(FetchError::StartBlockMustBeGreaterThanZero)
+            return Err(FetchError::StartBlockMustBeGreaterThanZero);
         }
 
         // insert new chain if not exists
@@ -54,15 +63,22 @@ impl FetcherApp {
 
         // connect to the tendermint rpc server
         let start_block = Height::from(fetcher_config.start_block);
-        let client = HttpClient::new(fetcher_config.tendermint_rpc.as_str())
-            .map(Arc::<HttpClient>::new)?;
-       
-        let mut current_block = self.get_start_block(start_block, fetcher_config.chain_id.as_str(), fetcher_config.try_resume_from_db);
+        let client =
+            HttpClient::new(fetcher_config.tendermint_rpc.as_str()).map(Arc::<HttpClient>::new)?;
+
+        let mut current_block = self.get_start_block(
+            start_block,
+            fetcher_config.chain_id.as_str(),
+            fetcher_config.try_resume_from_db,
+        );
         info!("start to listen blocks from height `{}`", current_block);
 
         loop {
             let client = client.clone();
-            match self.fetch_and_save_block(client, current_block, chain.id).await {
+            match self
+                .fetch_and_save_block(client, current_block, chain.id)
+                .await
+            {
                 Ok(_) => {
                     retry_count = 0;
                     current_block = current_block.increment();
@@ -85,14 +101,14 @@ impl FetcherApp {
         block_height: Height,
         chain_id: i32,
     ) -> Result<bool, FetchError> {
-        let block:block::Response = client.block(block_height).await?;
+        let block: block::Response = client.block(block_height).await?;
         info!(
             "block fetched hash {:?}, block_number: {}",
             block.block.header.hash(),
             block_height
         );
 
-        let block_results:block_results::Response = client.block_results(block_height).await?;
+        let block_results: block_results::Response = client.block_results(block_height).await?;
 
         // fetch all transactions
         let future_fetch_txes = block
@@ -108,31 +124,36 @@ impl FetcherApp {
             });
 
         // one of action for fetching transaction could fail
-        let fetch_txs_result:Vec<Result<tx::Response, tendermint_rpc::Error>> = future::join_all(future_fetch_txes).await;
-        let (ok, err):(Vec<_>, Vec<_>) = fetch_txs_result.into_iter()
-            .partition(|e| e.is_ok());
-        
-        if err.len() > 0 {
+        let fetch_txs_result: Vec<Result<tx::Response, tendermint_rpc::Error>> =
+            future::join_all(future_fetch_txes).await;
+        let (ok, err): (Vec<_>, Vec<_>) = fetch_txs_result.into_iter().partition(|e| e.is_ok());
+
+        if !err.is_empty() {
             return Err(FetchError::FetchingTransactionFailed);
         }
 
-        let txes = ok.into_iter()
+        let txes = ok
+            .into_iter()
             .map(|x| x.unwrap())
             .collect::<Vec<tx::Response>>();
 
-        let conn = self.db.conn()
+        let conn = self
+            .db
+            .conn()
             .unwrap_or_else(|| panic!("cannot get database connection, we may losse it?"));
 
         let current_time = current_time();
         conn.build_transaction()
             .repeatable_read()
             .run::<bool, DBModelError, _>(|| {
-                let mut new_block:NewBlock = NewBlockSchema::from(block.block).into();
+                let mut new_block: NewBlock = NewBlockSchema::from(block.block).into();
                 new_block.chain_id = chain_id;
                 NewBlock::insert(&conn, &new_block)?;
 
-                let begin_block_events = extract_begin_block_events(&block_results, chain_id, &current_time);
-                let end_block_events = extract_end_block_events(&block_results, chain_id, &current_time);
+                let begin_block_events =
+                    extract_begin_block_events(&block_results, chain_id, &current_time);
+                let end_block_events =
+                    extract_end_block_events(&block_results, chain_id, &current_time);
 
                 for event in begin_block_events {
                     NewEvent::insert(&conn, &event)?;
@@ -148,7 +169,7 @@ impl FetcherApp {
                     for event in tx_events {
                         NewEvent::insert(&conn, &event)?;
                     }
-                    
+
                     // store transction information
                     let mut new_tx: NewTransaction = NewTxSchema::from(tx).into();
                     new_tx.chain_id = chain_id;
@@ -161,29 +182,33 @@ impl FetcherApp {
     }
 
     /// resume start block from db
-    fn get_start_block(&self, start_block: Height, chain_id: &str, try_resume_from_db: bool) -> Height {
-         // fetch latest block heights
-         if try_resume_from_db {
-             let chain =
-                 Chain::find_by_chain_id(&self.db.conn().unwrap(), chain_id)
-                     .unwrap_or_else(|_| panic!("failed to get chain information from db"));
- 
-             let latest_block_height =
-                 Block::latest_block_height(&self.db.conn().unwrap(), chain.id);
- 
-             match latest_block_height {
-                 Ok(height) => {
-                     info!("fetcher resumed block height from db {}", height);
-                     Height::from(height as u32).increment()
-                 }
-                 Err(_) => {
+    fn get_start_block(
+        &self,
+        start_block: Height,
+        chain_id: &str,
+        try_resume_from_db: bool,
+    ) -> Height {
+        // fetch latest block heights
+        if try_resume_from_db {
+            let chain = Chain::find_by_chain_id(&self.db.conn().unwrap(), chain_id)
+                .unwrap_or_else(|_| panic!("failed to get chain information from db"));
+
+            let latest_block_height =
+                Block::latest_block_height(&self.db.conn().unwrap(), chain.id);
+
+            match latest_block_height {
+                Ok(height) => {
+                    info!("fetcher resumed block height from db {}", height);
+                    Height::from(height as u32).increment()
+                }
+                Err(_) => {
                     warn!("failed to fetch latest block height from db");
                     start_block
-                 }
-             }
-         } else {
+                }
+            }
+        } else {
             start_block
-         }
+        }
     }
 
     /// convert block.data into transaction hash

@@ -15,10 +15,10 @@ pub struct BackendDB {
 
 impl BackendDB {
     pub fn new(config: DBConfig) -> Self {
-        return BackendDB {
-            config: config,
+        BackendDB {
+            config,
             client: None,
-        };
+        }
     }
 }
 

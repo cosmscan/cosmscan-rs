@@ -3,7 +3,6 @@ use diesel::prelude::*;
 use diesel::Insertable;
 use diesel::PgConnection;
 use diesel::Queryable;
-use diesel::sql_types::Binary;
 use serde::{Deserialize, Serialize};
 
 use crate::errors::DBModelError;
