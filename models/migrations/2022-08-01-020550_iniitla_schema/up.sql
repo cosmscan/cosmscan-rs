@@ -42,13 +42,13 @@ CREATE TABLE IF NOT EXISTS transactions (
     height BIGINT NOT NULL,
     code int NOT NULL,
     code_space VARCHAR(256) NOT NULL,
-    tx_data BYTEA NOT NULL,
-    raw_log TEXT,
-    info TEXT,
+    tx_data TEXT NOT NULL,
+    raw_log TEXT NOT NULL,
+    info TEXT NOT NULL,
     memo VARCHAR(1024),
     gas_wanted BIGINT NOT NULL,
     gas_used BIGINT NOT NULL,
-    tx_date VARCHAR(256),
+    tx_timestamp VARCHAR(256) NOT NULL,
     inserted_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP
 );

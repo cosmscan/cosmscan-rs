@@ -3,7 +3,7 @@ use tendermint_rpc::error::ErrorDetail;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-pub enum FetchError {
+pub enum Error {
     #[error("one of action for fetching transaction failed")]
     FetchingTransactionFailed,
 
@@ -13,6 +13,9 @@ pub enum FetchError {
     #[error("failed to conenct with tendermint rpc client")]
     RPCError(tendermint_rpc::Error),
 
+    #[error("failed to connect to the cosmos grpc server")]
+    GRPCError(#[from] tonic::transport::Error),
+
     #[error("unknown server error")]
     UnknownServerError(tendermint_rpc::Error),
 
@@ -20,11 +23,11 @@ pub enum FetchError {
     StartBlockMustBeGreaterThanZero,
 }
 
-impl From<tendermint_rpc::Error> for FetchError {
+impl From<tendermint_rpc::Error> for Error {
     fn from(err: tendermint_rpc::Error) -> Self {
         match err.clone() {
-            tendermint_rpc::Error(ErrorDetail::Response(_), _) => FetchError::RPCError(err),
-            _ => FetchError::UnknownServerError(err),
+            tendermint_rpc::Error(ErrorDetail::Response(_), _) => Error::RPCError(err),
+            _ => Error::UnknownServerError(err),
         }
     }
 }

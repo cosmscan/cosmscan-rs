@@ -1,12 +1,13 @@
 use crate::{
     config::{ChainConfig, Config},
-    errors::FetchError,
+    errors::Error,
     extension::{NewBlockSchema, NewTxSchema},
     utils::{
         current_time, extract_begin_block_events, extract_end_block_events, extract_tx_events,
     },
 };
 
+use cosmos_sdk_proto::cosmos::tx::v1beta1::{Tx, service_client::ServiceClient, GetTxRequest, GetTxResponse};
 use cosmoscout_models::{
     db::{BackendDB, Database},
     errors::DBModelError,
@@ -20,6 +21,7 @@ use cosmoscout_models::{
 use futures::future;
 use log::{debug, error, info, warn};
 use sha2::{Digest, Sha256};
+use tonic::transport::Channel;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -35,26 +37,41 @@ use tokio::time::sleep;
 pub struct App {
     pub config: Config,
     pub db: BackendDB,
+    pub grpc_client: Arc<ServiceClient<Channel>>,
+    pub tendermint_client: Arc<HttpClient>,
 }
 
 impl App {
-    pub fn new(config: Config) -> Self {
+    pub async fn new(config: Config) -> Result<Self, Error> {
         let mut db = BackendDB::new(config.db.clone());
         let connected = db.connect();
         if !connected {
             panic!("unable to connect to the database");
         }
 
-        App { config, db }
+        let grpc_client = ServiceClient::connect(config.fetcher.cosmos_grpc.clone())
+            .await
+            .map(Arc::new)?;
+
+        let tendermint_client = HttpClient::new(config.fetcher.tendermint_rpc.as_str())
+            .map(Arc::<HttpClient>::new)
+            .map_err(|e| Error::from(e))?;
+
+        Ok(App { 
+            config, 
+            db,
+            grpc_client,
+            tendermint_client,
+        })
     }
 
-    pub async fn start(&self) -> Result<(), FetchError> {
+    pub async fn start(&self) -> Result<(), Error> {
         info!("fetcher app started to process");
         let mut retry_count = 0;
         let fetcher_config = &self.config.fetcher;
 
         if fetcher_config.start_block == 0 {
-            return Err(FetchError::StartBlockMustBeGreaterThanZero);
+            return Err(Error::StartBlockMustBeGreaterThanZero);
         }
 
         // insert new chain if not exists
@@ -63,8 +80,6 @@ impl App {
 
         // connect to the tendermint rpc server
         let start_block = Height::from(fetcher_config.start_block);
-        let client =
-            HttpClient::new(fetcher_config.tendermint_rpc.as_str()).map(Arc::<HttpClient>::new)?;
 
         let mut current_block = self.get_start_block(
             start_block,
@@ -74,9 +89,8 @@ impl App {
         info!("start to listen blocks from height `{}`", current_block);
 
         loop {
-            let client = client.clone();
             match self
-                .fetch_and_save_block(client, current_block, chain.id)
+                .fetch_and_save_block(current_block, chain.id)
                 .await
             {
                 Ok(_) => {
@@ -97,18 +111,17 @@ impl App {
 
     async fn fetch_and_save_block(
         &self,
-        client: Arc<HttpClient>,
         block_height: Height,
         chain_id: i32,
-    ) -> Result<bool, FetchError> {
-        let block: block::Response = client.block(block_height).await?;
+    ) -> Result<bool, Error> {
+        let block: block::Response = self.tendermint_client.block(block_height).await?;
         info!(
             "block fetched hash {:?}, block_number: {}",
             block.block.header.hash(),
             block_height
         );
 
-        let block_results: block_results::Response = client.block_results(block_height).await?;
+        let block_results: block_results::Response = self.tendermint_client.block_results(block_height).await?;
 
         // fetch all transactions
         let future_fetch_txes = block
@@ -118,24 +131,27 @@ impl App {
             .map(|tx| self.convert_txhash(tx))
             .map(|hash| {
                 let hash_wrapped = Hash::from_str(hash.as_str()).unwrap();
-                let t_client = client.clone();
+                let t_client = self.grpc_client.clone();
 
-                async move { t_client.tx(hash_wrapped, false).await }
+                async move { t_client.get_tx(GetTxRequest{
+                    hash,
+                }).await }
             });
 
         // one of action for fetching transaction could fail
-        let fetch_txs_result: Vec<Result<tx::Response, tendermint_rpc::Error>> =
+        let fetch_txs_result: Vec<Result<tonic::Response<GetTxResponse>, tonic::Status>> =
             future::join_all(future_fetch_txes).await;
+
         let (ok, err): (Vec<_>, Vec<_>) = fetch_txs_result.into_iter().partition(|e| e.is_ok());
 
         if !err.is_empty() {
-            return Err(FetchError::FetchingTransactionFailed);
+            return Err(Error::FetchingTransactionFailed);
         }
 
         let txes = ok
             .into_iter()
             .map(|x| x.unwrap())
-            .collect::<Vec<tx::Response>>();
+            .collect::<Vec<tonic::Response<GetTxResponse>>>();
 
         let conn = self
             .db
@@ -164,14 +180,18 @@ impl App {
                 }
 
                 for tx in txes.into_iter() {
+                    let inner_tx = tx.get_ref();
+                    let tx_body = inner_tx.tx.expect("tx body is empty in the response");
+                    let tx_response = inner_tx.tx_response.expect("tx response is empty");
+
                     // construct new events
-                    let tx_events = extract_tx_events(&tx, chain_id, &current_time);
+                    let tx_events = extract_tx_events(&tx_response, chain_id, &current_time);
                     for event in tx_events {
                         NewEvent::insert(&conn, &event)?;
                     }
 
                     // store transction information
-                    let mut new_tx: NewTransaction = NewTxSchema::from(tx).into();
+                    let mut new_tx: NewTransaction = NewTxSchema::from(&tx_response).into();
                     new_tx.chain_id = chain_id;
                     NewTransaction::insert(&conn, &new_tx)?;
                 }

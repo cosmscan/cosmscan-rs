@@ -22,7 +22,7 @@ pub struct ChainConfig {
 pub struct FetcherConfig {
     pub chain_id: String,
     pub tendermint_rpc: String,
-    pub cosmos_rest: String,
+    pub cosmos_grpc: String,
     pub start_block: u32,
     pub try_resume_from_db: bool,
 }
@@ -47,7 +47,7 @@ mod tests {
             FetcherConfig {
                 chain_id: "gaia".to_string(),
                 tendermint_rpc: "http://localhost:26657/".to_string(),
-                cosmos_rest: "http://localhost:1317/".to_string(),
+                cosmos_grpc: "localhost:9090".to_string(),
                 start_block: 1,
                 try_resume_from_db: true,
             }

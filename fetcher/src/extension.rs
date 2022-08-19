@@ -1,4 +1,5 @@
 use chrono::{NaiveDateTime, Utc};
+use cosmos_sdk_proto::cosmos::{base::abci::v1beta1::TxResponse, tx::v1beta1::GetTxResponse};
 use cosmoscout_models::models::{block::NewBlock, transaction::NewTransaction};
 use tendermint::{abci::Code, block::Block};
 use tendermint_rpc::endpoint::tx;
@@ -50,26 +51,24 @@ impl From<Block> for NewBlockSchema {
     }
 }
 
-impl From<tx::Response> for NewTxSchema {
-    fn from(tx: tx::Response) -> Self {
-        let code = match tx.tx_result.code {
-            Code::Ok => 0,
-            Code::Err(err) => err,
-        };
+impl From<&GetTxResponse> for NewTxSchema {
+    fn from(tx: &GetTxResponse) -> Self {
+        let tx_response = tx.tx_response.unwrap();
+        let tx_body = tx.tx.unwrap();
 
         NewTxSchema(NewTransaction {
             chain_id: 0,
-            transaction_hash: tx.hash.to_string(),
-            height: tx.height.into(),
-            code: code as i32,
-            code_space: tx.tx_result.codespace.to_string(),
-            tx_data: tx.tx_result.data.value().to_owned(),
-            raw_log: Some(tx.tx_result.log.value().to_owned()),
-            info: Some(tx.tx_result.info.to_string()),
+            transaction_hash: tx_response.txhash,
+            height: tx_response.height,
+            code: tx_response.code as i32,
+            code_space: tx_response.codespace,
+            tx_data: tx_response.data,
+            raw_log: tx_response.raw_log,
+            info: tx_response.info,
             memo: None,
-            gas_wanted: tx.tx_result.gas_wanted.value() as i64,
-            gas_used: tx.tx_result.gas_used.value() as i64,
-            tx_date: None,
+            gas_wanted: tx_response.gas_wanted,
+            gas_used: tx_response.gas_used,
+            tx_date: Some(tx_response.timestamp),
             inserted_at: NaiveDateTime::from_timestamp(Utc::now().timestamp(), 0),
         })
     }

@@ -1,4 +1,7 @@
+use std::str::from_utf8;
+
 use chrono::{NaiveDateTime, Utc};
+use cosmos_sdk_proto::cosmos::{tx::v1beta1::GetTxResponse, base::abci::v1beta1::TxResponse};
 use cosmoscout_models::models::event::{
     NewEvent, TX_TYPE_BEGIN_BLOCK, TX_TYPE_END_BLOCK, TX_TYPE_TRANSACTION,
 };
@@ -76,12 +79,11 @@ pub fn extract_end_block_events(
 
 /// extract events from transaction
 pub fn extract_tx_events(
-    tx: &tx::Response,
+    tx: &TxResponse,
     chain_id: i32,
     current_time: &NaiveDateTime,
 ) -> Vec<NewEvent> {
-    tx.tx_result
-        .events
+    tx.events
         .iter()
         .flat_map(|event| {
             let mut result: Vec<NewEvent> = vec![];
@@ -90,10 +92,10 @@ pub fn extract_tx_events(
                 result.push(NewEvent {
                     chain_id,
                     tx_type: TX_TYPE_TRANSACTION,
-                    tx_hash: Some(tx.hash.to_string()),
-                    event_type: event.type_str.clone(),
-                    event_key: attr.key.to_string(),
-                    event_value: attr.value.to_string(),
+                    tx_hash: Some(tx.txhash.clone()),
+                    event_type: event.r#type,
+                    event_key: from_utf8(&attr.key).unwrap().to_string(),
+                    event_value: from_utf8(&attr.value).unwrap().to_string(),
                     indexed: false,
                     inserted_at: *current_time,
                 });
