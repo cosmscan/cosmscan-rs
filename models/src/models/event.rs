@@ -8,6 +8,10 @@ use serde::{Deserialize, Serialize};
 use crate::errors::DBModelError;
 use crate::schema::events;
 
+pub const TX_TYPE_TRANSACTION:i16 = 1;
+pub const TX_TYPE_BEGIN_BLOCK:i16 = 2;
+pub const TX_TYPE_END_BLOCK:i16 = 3;
+
 #[derive(Debug, Queryable, Serialize, Deserialize)]
 pub struct Event {
     pub id: i32,
@@ -36,7 +40,7 @@ pub struct NewEvent {
 }
 
 impl NewEvent {
-    pub fn insert(new_event: &NewEvent, conn: &PgConnection) -> Result<usize, DBModelError> {
+    pub fn insert(conn: &PgConnection, new_event: &NewEvent) -> Result<usize, DBModelError> {
         diesel::insert_into(events::table)
             .values(new_event)
             .execute(conn)

@@ -1,13 +1,14 @@
 use crate::{
     config::{ChainConfig, Config},
-    utils::current_time, extension::{NewBlockSchema, NewTxSchema}, errors::FetchError,
+    utils::{current_time, extract_tx_events, extract_begin_block_events, extract_end_block_events}, extension::{NewBlockSchema, NewTxSchema}, errors::FetchError,
 };
+use chrono::{NaiveDateTime, Utc};
 use cosmoscout_models::{
     db::{BackendDB, Database},
     errors::DBModelError,
     models::{
         block::{Block, NewBlock},
-        chain::{Chain, NewChain}, transaction::NewTransaction,
+        chain::{Chain, NewChain}, transaction::NewTransaction, event::{NewEvent, TX_TYPE_TRANSACTION, TX_TYPE_BEGIN_BLOCK, TX_TYPE_END_BLOCK},
     },
 };
 use futures::future;
@@ -18,7 +19,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tendermint::abci::transaction::Hash;
 use tendermint::block::Height;
-use tendermint_rpc::{Client, HttpClient};
+use tendermint_rpc::{Client, HttpClient, endpoint::{tx, block, block_results}};
 use tokio::time::sleep;
 
 /// FetcherApp is for fetching ABCI blocks, transactions and logs.
@@ -38,32 +39,23 @@ impl FetcherApp {
         FetcherApp { config, db }
     }
 
-    pub async fn start(&self) {
+    pub async fn start(&self) -> Result<(), FetchError> {
         info!("fetcher app started to process");
         let mut retry_count = 0;
         let fetcher_config = &self.config.fetcher;
 
         if fetcher_config.start_block == 0 {
-            panic!("start block must be greater than 0");
+            return Err(FetchError::StartBlockMustBeGreaterThanZero)
         }
 
         // insert new chain if not exists
         self.insert_chain_config(&self.config.chain);
-        let chain = Chain::find_by_chain_id(&self.db.conn().unwrap(), &self.config.chain.chain_id)
-            .unwrap_or_else(|_| {
-                panic!("failed to fetch chain information");
-            });
+        let chain = Chain::find_by_chain_id(&self.db.conn().unwrap(), &self.config.chain.chain_id)?;
 
         // connect to the tendermint rpc server
         let start_block = Height::from(fetcher_config.start_block);
         let client = HttpClient::new(fetcher_config.tendermint_rpc.as_str())
-            .map(Arc::<HttpClient>::new)
-            .unwrap_or_else(|_| {
-                panic!(
-                    "failed to connect to the tendermint rpc, endpoint: {}",
-                    fetcher_config.tendermint_rpc
-                );
-            });
+            .map(Arc::<HttpClient>::new)?;
        
         let mut current_block = self.get_start_block(start_block, fetcher_config.chain_id.as_str(), fetcher_config.try_resume_from_db);
         info!("start to listen blocks from height `{}`", current_block);
@@ -93,14 +85,14 @@ impl FetcherApp {
         block_height: Height,
         chain_id: i32,
     ) -> Result<bool, FetchError> {
-        let block = client.block(block_height).await?;
+        let block:block::Response = client.block(block_height).await?;
         info!(
             "block fetched hash {:?}, block_number: {}",
             block.block.header.hash(),
             block_height
         );
 
-        let block_results = client.block_results(block_height).await?;
+        let block_results:block_results::Response = client.block_results(block_height).await?;
 
         // fetch all transactions
         let future_fetch_txes = block
@@ -116,7 +108,7 @@ impl FetcherApp {
             });
 
         // one of action for fetching transaction could fail
-        let fetch_txs_result = future::join_all(future_fetch_txes).await;
+        let fetch_txs_result:Vec<Result<tx::Response, tendermint_rpc::Error>> = future::join_all(future_fetch_txes).await;
         let (ok, err):(Vec<_>, Vec<_>) = fetch_txs_result.into_iter()
             .partition(|e| e.is_ok());
         
@@ -126,11 +118,12 @@ impl FetcherApp {
 
         let txes = ok.into_iter()
             .map(|x| x.unwrap())
-            .collect::<Vec<_>>();
+            .collect::<Vec<tx::Response>>();
 
         let conn = self.db.conn()
             .unwrap_or_else(|| panic!("cannot get database connection, we may losse it?"));
 
+        let current_time = current_time();
         conn.build_transaction()
             .repeatable_read()
             .run::<bool, DBModelError, _>(|| {
@@ -138,7 +131,25 @@ impl FetcherApp {
                 new_block.chain_id = chain_id;
                 NewBlock::insert(&conn, &new_block)?;
 
+                let begin_block_events = extract_begin_block_events(&block_results, chain_id, &current_time);
+                let end_block_events = extract_end_block_events(&block_results, chain_id, &current_time);
+
+                for event in begin_block_events {
+                    NewEvent::insert(&conn, &event)?;
+                }
+
+                for event in end_block_events {
+                    NewEvent::insert(&conn, &event)?;
+                }
+
                 for tx in txes.into_iter() {
+                    // construct new events
+                    let tx_events = extract_tx_events(&tx, chain_id, &current_time);
+                    for event in tx_events {
+                        NewEvent::insert(&conn, &event)?;
+                    }
+                    
+                    // store transction information
                     let mut new_tx: NewTransaction = NewTxSchema::from(tx).into();
                     new_tx.chain_id = chain_id;
                     NewTransaction::insert(&conn, &new_tx)?;

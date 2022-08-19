@@ -14,7 +14,10 @@ pub enum FetchError {
     RPCError(tendermint_rpc::Error),
     
     #[error("unknown server error")]
-    UnknownServerError(tendermint_rpc::Error)
+    UnknownServerError(tendermint_rpc::Error),
+
+    #[error("start block must be greater than 0")]
+    StartBlockMustBeGreaterThanZero,
 }
 
 impl From<tendermint_rpc::Error> for FetchError {

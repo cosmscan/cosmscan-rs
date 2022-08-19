@@ -1,5 +1,6 @@
 use clap::Parser;
 use env_logger::Env;
+use log::{error, info};
 use runtime::config::Config;
 use runtime::fetcher::FetcherApp;
 
@@ -19,6 +20,14 @@ async fn main() {
         .unwrap_or_else(|_| panic!("wrong config file location: {}", cli.filename));
 
     let fetcher = FetcherApp::new(config);
-    fetcher.start().await;
+    match fetcher.start().await {
+        Ok(_) => {
+            info!("fetcher app finished");
+        }
+        Err(e) => {
+            error!("unexpected error during fetching blockchain: {:?}", e);
+            panic!("teardown the fetcher");
+        }
+    }
 }
   
