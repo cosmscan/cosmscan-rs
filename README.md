@@ -29,3 +29,10 @@ $ RUST_LOG=info cargo run --bin fetcher -- --filename config.toml
 ```shell
 $ diesel migration redo
 ```
+
+### Crawling tendermint data
+At this time, I crawled only block, transaction and events.
+
+If you need more, Please open the issue.
+
+![Database](./docs/images/db.png)
