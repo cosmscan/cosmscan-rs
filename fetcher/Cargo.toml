@@ -1,5 +1,5 @@
 [package]
-name = "runtime"
+name = "cosmoscout-fetcher"
 version = "0.1.0"
 edition = "2021"
 
@@ -21,4 +21,3 @@ tokio = { version = "1", features = ["full"] }
 tendermint = "0.23.8"
 tendermint-rpc = { version = "0.23.8", features = ["http-client"]}
 cosmoscout-models = { path = "../models", version = "0.1.0" }
-cosmoscout-fetcher = { path = "../fetcher", version = "0.1.0" }

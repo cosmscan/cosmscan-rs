@@ -175,6 +175,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5827cebf4670468b8772dd191856768aedcb1b0278a04f989f7766351917b9dc"
 
 [[package]]
+name = "cosmoscout-fetcher"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "clap",
+ "cosmoscout-models",
+ "env_logger",
+ "futures",
+ "log",
+ "reqwest",
+ "serde",
+ "sha2 0.10.2",
+ "tendermint",
+ "tendermint-rpc",
+ "thiserror",
+ "tokio",
+ "toml",
+]
+
+[[package]]
 name = "cosmoscout-models"
 version = "0.1.0"
 dependencies = [
@@ -1236,6 +1257,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "clap",
+ "cosmoscout-fetcher",
  "cosmoscout-models",
  "env_logger",
  "futures",

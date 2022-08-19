@@ -31,13 +31,13 @@ use tendermint_rpc::{
 };
 use tokio::time::sleep;
 
-/// FetcherApp is for fetching ABCI blocks, transactions and logs.
-pub struct FetcherApp {
+/// App is for fetching ABCI blocks, transactions and logs.
+pub struct App {
     pub config: Config,
     pub db: BackendDB,
 }
 
-impl FetcherApp {
+impl App {
     pub fn new(config: Config) -> Self {
         let mut db = BackendDB::new(config.db.clone());
         let connected = db.connect();
@@ -45,7 +45,7 @@ impl FetcherApp {
             panic!("unable to connect to the database");
         }
 
-        FetcherApp { config, db }
+        App { config, db }
     }
 
     pub async fn start(&self) -> Result<(), FetchError> {

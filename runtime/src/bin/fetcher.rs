@@ -1,8 +1,7 @@
 use clap::Parser;
+use cosmoscout_fetcher::{app::App, config::Config};
 use env_logger::Env;
 use log::{error, info};
-use runtime::config::Config;
-use runtime::fetcher::FetcherApp;
 
 #[derive(Parser)]
 #[clap(author, version, about)]
@@ -19,7 +18,7 @@ async fn main() {
     let config = Config::from_file(cli.filename.clone())
         .unwrap_or_else(|_| panic!("wrong config file location: {}", cli.filename));
 
-    let fetcher = FetcherApp::new(config);
+    let fetcher = App::new(config);
     match fetcher.start().await {
         Ok(_) => {
             info!("fetcher app finished");
