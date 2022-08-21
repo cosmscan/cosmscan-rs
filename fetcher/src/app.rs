@@ -12,7 +12,6 @@ use cosmos_sdk_proto::cosmos::tx::v1beta1::{
 };
 use cosmoscout_models::{
     db::{BackendDB, Database},
-    errors::DBModelError,
     models::{
         block::{Block, NewBlock},
         chain::{Chain, NewChain},
@@ -156,7 +155,7 @@ impl App {
         let current_time = current_time();
         conn.build_transaction()
             .repeatable_read()
-            .run::<bool, DBModelError, _>(|| {
+            .run::<bool, cosmoscout_models::errors::Error, _>(|| {
                 let mut new_block: NewBlock = NewBlockSchema::from(block.block).into();
                 new_block.chain_id = chain_id;
                 NewBlock::insert(&conn, &new_block)?;
@@ -240,7 +239,7 @@ impl App {
         match chain {
             Ok(_) => debug!("chain already registered"),
             Err(e) => match e {
-                DBModelError::NotFound => {
+                cosmoscout_models::errors::Error::NotFound => {
                     NewChain::insert(
                         &NewChain {
                             chain_id: chain_config.chain_id.clone(),

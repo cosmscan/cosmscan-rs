@@ -5,7 +5,7 @@ use diesel::PgConnection;
 use diesel::Queryable;
 use serde::{Deserialize, Serialize};
 
-use crate::errors::DBModelError;
+use crate::errors::Error;
 use crate::schema::transactions;
 
 #[derive(Debug, Queryable, Serialize, Deserialize)]
@@ -46,7 +46,7 @@ pub struct NewTransaction {
 }
 
 impl NewTransaction {
-    pub fn insert(conn: &PgConnection, new_tx: &NewTransaction) -> Result<usize, DBModelError> {
+    pub fn insert(conn: &PgConnection, new_tx: &NewTransaction) -> Result<usize, Error> {
         diesel::insert_into(transactions::table)
             .values(new_tx)
             .execute(conn)

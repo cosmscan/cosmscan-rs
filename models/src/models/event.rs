@@ -5,7 +5,7 @@ use diesel::PgConnection;
 use diesel::Queryable;
 use serde::{Deserialize, Serialize};
 
-use crate::errors::DBModelError;
+use crate::errors::Error;
 use crate::schema::events;
 
 pub const TX_TYPE_TRANSACTION: i16 = 1;
@@ -40,7 +40,7 @@ pub struct NewEvent {
 }
 
 impl NewEvent {
-    pub fn insert(conn: &PgConnection, new_event: &NewEvent) -> Result<usize, DBModelError> {
+    pub fn insert(conn: &PgConnection, new_event: &NewEvent) -> Result<usize, Error> {
         diesel::insert_into(events::table)
             .values(new_event)
             .execute(conn)

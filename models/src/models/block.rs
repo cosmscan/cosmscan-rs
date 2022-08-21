@@ -5,7 +5,7 @@ use diesel::PgConnection;
 use diesel::Queryable;
 use serde::{Deserialize, Serialize};
 
-use crate::errors::DBModelError;
+use crate::errors::Error;
 use crate::schema::blocks;
 use crate::schema::blocks::dsl::blocks as all_blocks;
 
@@ -31,7 +31,7 @@ pub struct Block {
 }
 
 impl Block {
-    pub fn latest_block_height(conn: &PgConnection, chain_id: i32) -> Result<i64, DBModelError> {
+    pub fn latest_block_height(conn: &PgConnection, chain_id: i32) -> Result<i64, Error> {
         all_blocks
             .order(blocks::height.desc())
             .limit(1)
@@ -63,7 +63,7 @@ pub struct NewBlock {
 }
 
 impl NewBlock {
-    pub fn insert(conn: &PgConnection, new_block: &NewBlock) -> Result<usize, DBModelError> {
+    pub fn insert(conn: &PgConnection, new_block: &NewBlock) -> Result<usize, Error> {
         diesel::insert_into(blocks::table)
             .values(new_block)
             .execute(conn)

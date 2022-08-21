@@ -5,7 +5,7 @@ use diesel::PgConnection;
 use diesel::Queryable;
 use serde::{Deserialize, Serialize};
 
-use crate::errors::DBModelError;
+use crate::errors::Error;
 use crate::schema::chains;
 use crate::schema::chains::dsl::chains as all_chains;
 
@@ -21,18 +21,18 @@ pub struct Chain {
 }
 
 impl Chain {
-    pub fn query_all(conn: &PgConnection) -> Result<Vec<Chain>, DBModelError> {
+    pub fn query_all(conn: &PgConnection) -> Result<Vec<Chain>, Error> {
         all_chains
             .order(chains::id.desc())
             .load::<Chain>(conn)
             .map_err(|e| e.into())
     }
 
-    pub fn count_all(conn: &PgConnection) -> Result<i64, DBModelError> {
+    pub fn count_all(conn: &PgConnection) -> Result<i64, Error> {
         all_chains.count().get_result(conn).map_err(|e| e.into())
     }
 
-    pub fn find_by_chain_id(conn: &PgConnection, chain_id: &str) -> Result<Chain, DBModelError> {
+    pub fn find_by_chain_id(conn: &PgConnection, chain_id: &str) -> Result<Chain, Error> {
         all_chains
             .filter(chains::chain_id.eq(chain_id))
             .first::<Chain>(conn)
@@ -49,7 +49,7 @@ pub struct NewChain {
 }
 
 impl NewChain {
-    pub fn insert(new_chain: &NewChain, conn: &PgConnection) -> Result<usize, DBModelError> {
+    pub fn insert(new_chain: &NewChain, conn: &PgConnection) -> Result<usize, Error> {
         diesel::insert_into(chains::table)
             .values(new_chain)
             .execute(conn)
