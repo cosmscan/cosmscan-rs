@@ -16,7 +16,7 @@ use cosmoscout_models::{
         block::{NewBlock},
         chain::{NewChain},
         transaction::NewTransaction,
-    }, storage::{Storage, PersistenceStorage},
+    }, storage::{StorageWriter, PersistenceStorage},
 };
 use futures::future;
 use log::{debug, error, info, warn};
@@ -30,9 +30,10 @@ use tendermint_rpc::{
 };
 use tokio::{sync::Mutex, time::sleep};
 use tonic::transport::Channel;
+use cosmoscout_models::storage::StorageReader;
 
 /// App is for fetching ABCI blocks, transactions and logs.
-pub struct App<T:Storage> {
+pub struct App<T:StorageWriter + StorageReader> {
     pub config: Config,
     pub storage: T,
     pub grpc_client: Arc<Mutex<ServiceClient<Channel>>>,
