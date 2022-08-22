@@ -1,11 +1,8 @@
 use chrono::NaiveDateTime;
-use diesel::prelude::*;
 use diesel::Insertable;
-use diesel::PgConnection;
 use diesel::Queryable;
 use serde::{Deserialize, Serialize};
 
-use crate::errors::Error;
 use crate::schema::transactions;
 
 #[derive(Debug, Queryable, Serialize, Deserialize)]
@@ -43,56 +40,4 @@ pub struct NewTransaction {
     pub gas_used: i64,
     pub tx_timestamp: String,
     pub inserted_at: NaiveDateTime,
-}
-
-impl NewTransaction {
-    pub fn insert(conn: &PgConnection, new_tx: &NewTransaction) -> Result<usize, Error> {
-        diesel::insert_into(transactions::table)
-            .values(new_tx)
-            .execute(conn)
-            .map_err(|e| e.into())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use chrono::Utc;
-    use serial_test::serial;
-
-    use crate::{
-        config::DBConfig,
-        db::{BackendDB, Database},
-        models::test_helpers::cleanup_db,
-    };
-
-    use super::*;
-
-    #[test]
-    #[serial]
-    fn test_insert_tx() {
-        let mut db = BackendDB::new(DBConfig::default());
-        let connected = db.connect();
-        assert_eq!(connected, true);
-        cleanup_db(&db.conn().unwrap());
-
-        let result = NewTransaction::insert(
-            &db.conn().unwrap(),
-            &NewTransaction {
-                chain_id: 1,
-                transaction_hash: "0000txhash".to_string(),
-                height: 25,
-                code: 1,
-                code_space: "0000codespace".to_string(),
-                tx_data: "tx_data".to_string(),
-                raw_log: "raw_log".to_string(),
-                info: "".to_string(),
-                memo: None,
-                gas_wanted: 25000,
-                gas_used: 23000,
-                tx_timestamp: "time".to_string(),
-                inserted_at: NaiveDateTime::from_timestamp(Utc::now().timestamp(), 0),
-            },
-        );
-        assert_eq!(result.is_err(), false);
-    }
 }

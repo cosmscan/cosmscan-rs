@@ -1,9 +1,13 @@
 use crate::{
-    models::{block::NewBlock, chain::NewChain, event::NewEvent, transaction::NewTransaction}, db::{BackendDB, Database}, errors::Error, schema::{blocks, chains, events, transactions},
+    models::{block::NewBlock, chain::{NewChain, Chain}, event::NewEvent, transaction::NewTransaction}, db::{BackendDB, Database}, errors::Error, schema::{blocks, chains, events, transactions},
 };
+
+use crate::schema::chains::dsl::chains as all_chains;
 
 use diesel::{prelude::*, r2d2::ConnectionManager};
 use r2d2::PooledConnection;
+
+type Connection = PooledConnection<ConnectionManager<PgConnection>>;
 
 pub trait Storage {
     // block operations
@@ -12,6 +16,7 @@ pub trait Storage {
 
     // chain operations
     fn insert_chain(&self, chain: &NewChain) -> Result<usize, Error>;
+    fn find_by_chain_id(&self, chain_id: String) -> Result<Chain, Error>;
 
     // event operations
     fn insert_event(&self, event: &NewEvent) -> Result<usize, Error>;
@@ -20,19 +25,22 @@ pub trait Storage {
     fn insert_transaction(&self, transaction: &NewTransaction) -> Result<usize, Error>;
 }
 
-struct PersistenceStorage<T>
+pub struct PersistenceStorage<T>
 where T: Database {
      db: T,
 }
 
 impl PersistenceStorage<BackendDB> {
     pub fn new(mut db: BackendDB) -> Self {
-        let _ = db.connect();
+        let connected = db.connect();
+        if !connected {
+            panic!("failed to connect to the database, please check configuration")
+        }
     
         Self { db }
     }
 
-    pub fn get_conn(&self) -> Result<PooledConnection<ConnectionManager<PgConnection>>, Error> {
+    pub fn get_conn(&self) -> Result<Connection, Error> {
         match self.db.conn() {
             Some(conn) => {
                 Ok(conn)
@@ -41,6 +49,16 @@ impl PersistenceStorage<BackendDB> {
                 Err(Error::ClientDoesntExists)
             }
         }
+    }
+
+    pub fn within_transaction<F> (&self, f: F) -> Result<bool, Error>
+    where F: FnOnce() -> Result<bool, Error> {
+        let conn = self.get_conn()?;
+        conn.build_transaction()
+            .repeatable_read()
+            .run::<bool, Error, _>(|| {
+                f()
+            })
     }
 }
 
@@ -85,6 +103,15 @@ impl Storage for PersistenceStorage<BackendDB>{
         diesel::insert_into(transactions::table)
             .values(transaction)
             .execute(&conn)
+            .map_err(|e| e.into())
+    }
+
+    fn find_by_chain_id(&self, chain_id: String) -> Result<Chain, Error> {
+        let conn = self.get_conn()?;
+        
+        all_chains.filter(chains::chain_id.eq(chain_id))
+            .limit(1)
+            .first(&conn)
             .map_err(|e| e.into())
     }
 }

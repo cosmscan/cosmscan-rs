@@ -11,13 +11,12 @@ use cosmos_sdk_proto::cosmos::tx::v1beta1::{
     service_client::ServiceClient, GetTxRequest, GetTxResponse,
 };
 use cosmoscout_models::{
-    db::{BackendDB, Database},
+    db::{BackendDB},
     models::{
-        block::{Block, NewBlock},
-        chain::{Chain, NewChain},
-        event::NewEvent,
+        block::{NewBlock},
+        chain::{NewChain},
         transaction::NewTransaction,
-    },
+    }, storage::{Storage, PersistenceStorage},
 };
 use futures::future;
 use log::{debug, error, info, warn};
@@ -33,20 +32,17 @@ use tokio::{sync::Mutex, time::sleep};
 use tonic::transport::Channel;
 
 /// App is for fetching ABCI blocks, transactions and logs.
-pub struct App {
+pub struct App<T:Storage> {
     pub config: Config,
-    pub db: BackendDB,
+    pub storage: T,
     pub grpc_client: Arc<Mutex<ServiceClient<Channel>>>,
     pub tendermint_client: Arc<HttpClient>,
 }
 
-impl App {
+impl App<PersistenceStorage<BackendDB>> {
     pub async fn new(config: Config) -> Result<Self, Error> {
-        let mut db = BackendDB::new(config.db.clone());
-        let connected = db.connect();
-        if !connected {
-            panic!("unable to connect to the database");
-        }
+        let db = BackendDB::new(config.db.clone());
+        let storage = PersistenceStorage::new(db);
 
         let grpc_client = ServiceClient::connect(config.fetcher.cosmos_grpc.clone())
             .await
@@ -59,7 +55,7 @@ impl App {
 
         Ok(App {
             config,
-            db,
+            storage,
             grpc_client,
             tendermint_client,
         })
@@ -76,16 +72,17 @@ impl App {
 
         // insert new chain if not exists
         self.insert_chain_config(&self.config.chain);
-        let chain = Chain::find_by_chain_id(&self.db.conn().unwrap(), &self.config.chain.chain_id)?;
+
+        let chain = self.storage.find_by_chain_id(self.config.chain.chain_id.clone())?;
 
         // connect to the tendermint rpc server
         let start_block = Height::from(fetcher_config.start_block);
 
         let mut current_block = self.get_start_block(
             start_block,
-            fetcher_config.chain_id.as_str(),
+            chain.id,
             fetcher_config.try_resume_from_db,
-        );
+        )?;
         info!("start to listen blocks from height `{}`", current_block);
 
         loop {
@@ -147,79 +144,67 @@ impl App {
             .map(|x| x.unwrap())
             .collect::<Vec<tonic::Response<GetTxResponse>>>();
 
-        let conn = self
-            .db
-            .conn()
-            .unwrap_or_else(|| panic!("cannot get database connection, we may losse it?"));
-
         let current_time = current_time();
-        conn.build_transaction()
-            .repeatable_read()
-            .run::<bool, cosmoscout_models::errors::Error, _>(|| {
-                let mut new_block: NewBlock = NewBlockSchema::from(block.block).into();
-                new_block.chain_id = chain_id;
-                NewBlock::insert(&conn, &new_block)?;
+        self.storage.within_transaction(|| {
+            let mut new_block: NewBlock = NewBlockSchema::from(block.block).into();
+            new_block.chain_id = chain_id;
+            self.storage.insert_block(&new_block)?;
 
-                let begin_block_events =
-                    extract_begin_block_events(&block_results, chain_id, &current_time);
-                let end_block_events =
-                    extract_end_block_events(&block_results, chain_id, &current_time);
+            let begin_block_events =
+                extract_begin_block_events(&block_results, chain_id, &current_time);
+            let end_block_events =
+                extract_end_block_events(&block_results, chain_id, &current_time);
 
-                for event in begin_block_events {
-                    NewEvent::insert(&conn, &event)?;
+            for event in begin_block_events {
+                self.storage.insert_event(&event)?;
+            }
+
+            for event in end_block_events {
+                self.storage.insert_event(&event)?;
+            }
+
+            for tx in txes.into_iter() {
+                let inner_tx = tx.get_ref();
+
+                // construct new events
+                let tx_events = extract_tx_events(&inner_tx, chain_id, &current_time);
+                for event in tx_events {
+                    self.storage.insert_event(&event)?;
                 }
 
-                for event in end_block_events {
-                    NewEvent::insert(&conn, &event)?;
-                }
+                // store transction information
+                let mut new_tx: NewTransaction = NewTxSchema::from(inner_tx).into();
+                new_tx.chain_id = chain_id;
+                self.storage.insert_transaction(&new_tx)?;
+            }
 
-                for tx in txes.into_iter() {
-                    let inner_tx = tx.get_ref();
-
-                    // construct new events
-                    let tx_events = extract_tx_events(&inner_tx, chain_id, &current_time);
-                    for event in tx_events {
-                        NewEvent::insert(&conn, &event)?;
-                    }
-
-                    // store transction information
-                    let mut new_tx: NewTransaction = NewTxSchema::from(inner_tx).into();
-                    new_tx.chain_id = chain_id;
-                    NewTransaction::insert(&conn, &new_tx)?;
-                }
-
-                Ok(true)
-            })
-            .map_err(|e| e.into())
+            Ok(true)
+        }).map_err(|e| e.into())
     }
 
     /// resume start block from db
     fn get_start_block(
         &self,
         start_block: Height,
-        chain_id: &str,
+        chain_id: i32,
         try_resume_from_db: bool,
-    ) -> Height {
+    ) -> Result<Height, Error> {
         // fetch latest block heights
         if try_resume_from_db {
-            let chain = Chain::find_by_chain_id(&self.db.conn().unwrap(), chain_id)
-                .unwrap_or_else(|_| panic!("failed to get chain information from db"));
-
-            let latest_block_height =
-                Block::latest_block_height(&self.db.conn().unwrap(), chain.id);
+            let latest_block_height = self.storage.latest_block_height(chain_id);
 
             match latest_block_height {
                 Ok(height) => {
                     info!("fetcher resumed block height from db {}", height);
-                    Height::from(height as u32).increment()
+                    Ok(Height::from(height as u32).increment())
                 }
                 Err(_) => {
                     warn!("failed to fetch latest block height from db");
-                    start_block
+                    Ok(start_block)
                 }
             }
         } else {
-            start_block
+            Ok(start_block)
         }
     }
 
@@ -233,22 +218,19 @@ impl App {
 
     /// save chain config if it doesn't exists
     fn insert_chain_config(&self, chain_config: &ChainConfig) {
-        let db = &self.db;
+        let chain = self.storage.find_by_chain_id(chain_config.chain_id.clone());
 
-        let chain = Chain::find_by_chain_id(&db.conn().unwrap(), chain_config.chain_id.as_str());
         match chain {
             Ok(_) => debug!("chain already registered"),
             Err(e) => match e {
                 cosmoscout_models::errors::Error::NotFound => {
-                    NewChain::insert(
-                        &NewChain {
-                            chain_id: chain_config.chain_id.clone(),
-                            chain_name: chain_config.chain_name.clone(),
-                            inserted_at: current_time(),
-                        },
-                        &db.conn().unwrap(),
-                    )
-                    .unwrap_or_else(|e| panic!("failed to insert chain information: {:?}", e));
+                    let new_chain = &NewChain {
+                        chain_id: chain_config.chain_id.clone(),
+                        chain_name: chain_config.chain_name.clone(),
+                        inserted_at: current_time(),
+                    };
+                    self.storage.insert_chain(&new_chain)
+                        .unwrap_or_else(|e| panic!("failed to insert chain information: {:?}", e));
                 }
                 _ => panic!("unknown error during fetching chain infroation, {:?}", e),
             },

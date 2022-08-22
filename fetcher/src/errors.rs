@@ -1,4 +1,3 @@
-use cosmoscout_models::errors::DBModelError;
 use tendermint_rpc::error::ErrorDetail;
 use thiserror::Error;
 

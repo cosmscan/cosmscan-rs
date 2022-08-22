@@ -47,7 +47,7 @@ mod tests {
             FetcherConfig {
                 chain_id: "gaia".to_string(),
                 tendermint_rpc: "http://localhost:26657/".to_string(),
-                cosmos_grpc: "localhost:9090".to_string(),
+                cosmos_grpc: "http://localhost:9090/".to_string(),
                 start_block: 1,
                 try_resume_from_db: true,
             }
