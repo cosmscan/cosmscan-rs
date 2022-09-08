@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS account_balance (
 CREATE TABLE IF NOT EXISTS messages (
     id SERIAL PRIMARY KEY,
     transaction_id INT NOT NULL,
-    messages JSONB,
+    rawdata JSONB,
     inserted_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP,
     CONSTRAINT fk_transaction_id FOREIGN KEY (transaction_id) REFERENCES transactions(id)
@@ -102,7 +102,7 @@ CREATE INDEX idx_blocks_block_hash ON blocks(block_hash);
 
 CREATE INDEX idx_accounts_chain_id ON accounts(chain_id);
 
-CREATE INDEX idx_events_chain_id ON events(chain_id);
+CREATE INDEX idx_events_chain_id ON events(chain_id);git 
 CREATE INDEX idx_events_tx_hash ON events(tx_hash);
 
 CREATE INDEX idx_transactions_chain_id ON events(chain_id);

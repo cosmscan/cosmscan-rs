@@ -74,7 +74,7 @@ diesel::table! {
     messages (id) {
         id -> Int4,
         transaction_id -> Int4,
-        messages -> Nullable<Jsonb>,
+        rawdata -> Nullable<Jsonb>,
         inserted_at -> Timestamp,
         updated_at -> Nullable<Timestamp>,
     }

@@ -1,14 +1,22 @@
 use crate::{
-    models::{block::NewBlock, chain::{NewChain, Chain}, event::NewEvent, transaction::NewTransaction}, db::{BackendDB, Database}, errors::Error, schema::{blocks, chains, events, transactions},
+    db::{BackendDB, Database},
+    errors::Error,
+    models::{
+        block::NewBlock,
+        chain::{Chain, NewChain},
+        event::NewEvent,
+        transaction::NewTransaction,
+    },
+    schema::{blocks, chains, events, transactions},
 };
 
 use crate::schema::chains::dsl::chains as all_chains;
 
-use diesel::{prelude::*, r2d2::ConnectionManager};
-use r2d2::PooledConnection;
 use crate::models::block::Block;
 use crate::models::event::Event;
 use crate::models::transaction::Transaction;
+use diesel::{prelude::*, r2d2::ConnectionManager};
+use r2d2::PooledConnection;
 
 type Connection = PooledConnection<ConnectionManager<PgConnection>>;
 
@@ -23,7 +31,11 @@ pub trait StorageReader {
     fn find_by_chain_id(&self, chain_id: String) -> Result<Chain, Error>;
     fn all_chains(&self) -> Result<Vec<Chain>, Error>;
     fn list_blocks(&self, chain_id: i32, limit: i64, offset: i64) -> Result<Vec<Block>, Error>;
-    fn list_transactions(&self, chain_id: i32, block_number: i64) -> Result<Vec<(Transaction, Vec<Event>)>, Error>;
+    fn list_transactions(
+        &self,
+        chain_id: i32,
+        block_number: i64,
+    ) -> Result<Vec<(Transaction, Vec<Event>)>, Error>;
 }
 
 /// StorageWriter defines a set of method for writing/updating the database.
@@ -44,8 +56,10 @@ pub trait StorageWriter {
 
 /// PersistenceStorage should implements both [`StorageWriter`] and [`StorageReader`]
 pub struct PersistenceStorage<T>
-where T: Database {
-     db: T,
+where
+    T: Database,
+{
+    db: T,
 }
 
 impl PersistenceStorage<BackendDB> {
@@ -54,33 +68,29 @@ impl PersistenceStorage<BackendDB> {
         if !connected {
             panic!("failed to connect to the database, please check configuration")
         }
-    
+
         Self { db }
     }
 
     pub fn get_conn(&self) -> Result<Connection, Error> {
         match self.db.conn() {
-            Some(conn) => {
-                Ok(conn)
-            }
-            None => {
-                Err(Error::ClientDoesntExists)
-            }
+            Some(conn) => Ok(conn),
+            None => Err(Error::ClientDoesntExists),
         }
     }
 
-    pub fn within_transaction<F> (&self, f: F) -> Result<bool, Error>
-    where F: FnOnce() -> Result<bool, Error> {
+    pub fn within_transaction<F>(&self, f: F) -> Result<bool, Error>
+    where
+        F: FnOnce() -> Result<bool, Error>,
+    {
         let conn = self.get_conn()?;
         conn.build_transaction()
             .repeatable_read()
-            .run::<bool, Error, _>(|| {
-                f()
-            })
+            .run::<bool, Error, _>(|| f())
     }
 }
 
-impl StorageWriter for PersistenceStorage<BackendDB>{
+impl StorageWriter for PersistenceStorage<BackendDB> {
     fn insert_block(&self, block: &NewBlock) -> Result<usize, Error> {
         let conn = self.get_conn()?;
         diesel::insert_into(blocks::table)
@@ -158,7 +168,11 @@ impl StorageReader for PersistenceStorage<BackendDB> {
         todo!()
     }
 
-    fn list_transactions(&self, chain_id: i32, block_number: i64) -> Result<Vec<(Transaction, Vec<Event>)>, Error> {
+    fn list_transactions(
+        &self,
+        chain_id: i32,
+        block_number: i64,
+    ) -> Result<Vec<(Transaction, Vec<Event>)>, Error> {
         todo!()
     }
 }

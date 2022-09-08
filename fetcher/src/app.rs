@@ -10,13 +10,11 @@ use crate::{
 use cosmos_sdk_proto::cosmos::tx::v1beta1::{
     service_client::ServiceClient, GetTxRequest, GetTxResponse,
 };
+use cosmoscout_models::storage::StorageReader;
 use cosmoscout_models::{
-    db::{BackendDB},
-    models::{
-        block::{NewBlock},
-        chain::{NewChain},
-        transaction::NewTransaction,
-    }, storage::{StorageWriter, PersistenceStorage},
+    db::BackendDB,
+    models::{block::NewBlock, chain::NewChain, transaction::NewTransaction},
+    storage::{PersistenceStorage, StorageWriter},
 };
 use futures::future;
 use log::{debug, error, info, warn};
@@ -30,10 +28,9 @@ use tendermint_rpc::{
 };
 use tokio::{sync::Mutex, time::sleep};
 use tonic::transport::Channel;
-use cosmoscout_models::storage::StorageReader;
 
 /// App is for fetching ABCI blocks, transactions and logs.
-pub struct App<T:StorageWriter + StorageReader> {
+pub struct App<T: StorageWriter + StorageReader> {
     pub config: Config,
     pub storage: T,
     pub grpc_client: Arc<Mutex<ServiceClient<Channel>>>,
@@ -74,16 +71,15 @@ impl App<PersistenceStorage<BackendDB>> {
         // insert new chain if not exists
         self.insert_chain_config(&self.config.chain);
 
-        let chain = self.storage.find_by_chain_id(self.config.chain.chain_id.clone())?;
+        let chain = self
+            .storage
+            .find_by_chain_id(self.config.chain.chain_id.clone())?;
 
         // connect to the tendermint rpc server
         let start_block = Height::from(fetcher_config.start_block);
 
-        let mut current_block = self.get_start_block(
-            start_block,
-            chain.id,
-            fetcher_config.try_resume_from_db,
-        )?;
+        let mut current_block =
+            self.get_start_block(start_block, chain.id, fetcher_config.try_resume_from_db)?;
         info!("start to listen blocks from height `{}`", current_block);
 
         loop {
@@ -146,41 +142,43 @@ impl App<PersistenceStorage<BackendDB>> {
             .collect::<Vec<tonic::Response<GetTxResponse>>>();
 
         let current_time = current_time();
-        self.storage.within_transaction(|| {
-            let mut new_block: NewBlock = NewBlockSchema::from(block.block).into();
-            new_block.chain_id = chain_id;
-            self.storage.insert_block(&new_block)?;
+        self.storage
+            .within_transaction(|| {
+                let mut new_block: NewBlock = NewBlockSchema::from(block.block).into();
+                new_block.chain_id = chain_id;
+                self.storage.insert_block(&new_block)?;
 
-            let begin_block_events =
-                extract_begin_block_events(&block_results, chain_id, &current_time);
-            let end_block_events =
-                extract_end_block_events(&block_results, chain_id, &current_time);
+                let begin_block_events =
+                    extract_begin_block_events(&block_results, chain_id, &current_time);
+                let end_block_events =
+                    extract_end_block_events(&block_results, chain_id, &current_time);
 
-            for event in begin_block_events {
-                self.storage.insert_event(&event)?;
-            }
-
-            for event in end_block_events {
-                self.storage.insert_event(&event)?;
-            }
-
-            for tx in txes.into_iter() {
-                let inner_tx = tx.get_ref();
-
-                // construct new events
-                let tx_events = extract_tx_events(&inner_tx, chain_id, &current_time);
-                for event in tx_events {
+                for event in begin_block_events {
                     self.storage.insert_event(&event)?;
                 }
 
-                // store transction information
-                let mut new_tx: NewTransaction = NewTxSchema::from(inner_tx).into();
-                new_tx.chain_id = chain_id;
-                self.storage.insert_transaction(&new_tx)?;
-            }
+                for event in end_block_events {
+                    self.storage.insert_event(&event)?;
+                }
 
-            Ok(true)
-        }).map_err(|e| e.into())
+                for tx in txes.into_iter() {
+                    let inner_tx = tx.get_ref();
+
+                    // construct new events
+                    let tx_events = extract_tx_events(&inner_tx, chain_id, &current_time);
+                    for event in tx_events {
+                        self.storage.insert_event(&event)?;
+                    }
+
+                    // store transction information
+                    let mut new_tx: NewTransaction = NewTxSchema::from(inner_tx).into();
+                    new_tx.chain_id = chain_id;
+                    self.storage.insert_transaction(&new_tx)?;
+                }
+
+                Ok(true)
+            })
+            .map_err(|e| e.into())
     }
 
     /// resume start block from db
@@ -230,7 +228,8 @@ impl App<PersistenceStorage<BackendDB>> {
                         chain_name: chain_config.chain_name.clone(),
                         inserted_at: current_time(),
                     };
-                    self.storage.insert_chain(&new_chain)
+                    self.storage
+                        .insert_chain(&new_chain)
                         .unwrap_or_else(|e| panic!("failed to insert chain information: {:?}", e));
                 }
                 _ => panic!("unknown error during fetching chain infroation, {:?}", e),
