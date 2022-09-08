@@ -31,9 +31,6 @@ CREATE TABLE IF NOT EXISTS blocks (
     inserted_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP
 );
-CREATE INDEX idx_blocks_chain_id ON blocks(chain_id);
-CREATE INDEX idx_blocks_height ON blocks(height);
-CREATE INDEX idx_blocks_block_hash ON blocks(block_hash);
 
 -- transactions --
 CREATE TABLE IF NOT EXISTS transactions (
@@ -53,8 +50,6 @@ CREATE TABLE IF NOT EXISTS transactions (
     inserted_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP
 );
-CREATE INDEX idx_transactions_chain_id ON events(chain_id);
-CREATE INDEX idx_transactions_tx_hash ON transactions(transaction_hash);
 
 -- events --
 CREATE TABLE IF NOT EXISTS events (
@@ -69,8 +64,6 @@ CREATE TABLE IF NOT EXISTS events (
     inserted_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP
 );
-CREATE INDEX idx_events_chain_id ON events(chain_id);
-CREATE INDEX idx_events_tx_hash ON events(tx_hash);
 
 -- account --
 CREATE TABLE IF NOT EXISTS accounts (
@@ -80,7 +73,6 @@ CREATE TABLE IF NOT EXISTS accounts (
     inserted_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP
 );
-CREATE INDEX idx_accounts_chain_id ON accounts(chain_id);
 
 -- account_balance --
 CREATE TABLE IF NOT EXISTS account_balance (
@@ -102,3 +94,16 @@ CREATE TABLE IF NOT EXISTS messages (
     updated_at TIMESTAMP,
     CONSTRAINT fk_transaction_id FOREIGN KEY (transaction_id) REFERENCES transactions(id)
 );
+
+-- create indexes --
+CREATE INDEX idx_blocks_chain_id ON blocks(chain_id);
+CREATE INDEX idx_blocks_height ON blocks(height);
+CREATE INDEX idx_blocks_block_hash ON blocks(block_hash);
+
+CREATE INDEX idx_accounts_chain_id ON accounts(chain_id);
+
+CREATE INDEX idx_events_chain_id ON events(chain_id);
+CREATE INDEX idx_events_tx_hash ON events(tx_hash);
+
+CREATE INDEX idx_transactions_chain_id ON events(chain_id);
+CREATE INDEX idx_transactions_tx_hash ON transactions(transaction_hash);

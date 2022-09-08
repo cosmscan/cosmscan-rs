@@ -1,4 +1,27 @@
-table! {
+// @generated automatically by Diesel CLI.
+
+diesel::table! {
+    account_balance (id) {
+        id -> Int4,
+        account_id -> Int4,
+        amount -> Int8,
+        denom -> Varchar,
+        inserted_at -> Timestamp,
+        updated_at -> Nullable<Timestamp>,
+    }
+}
+
+diesel::table! {
+    accounts (id) {
+        id -> Int4,
+        chain_id -> Int4,
+        address -> Varchar,
+        inserted_at -> Timestamp,
+        updated_at -> Nullable<Timestamp>,
+    }
+}
+
+diesel::table! {
     blocks (id) {
         id -> Int4,
         chain_id -> Int4,
@@ -20,7 +43,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     chains (id) {
         id -> Int4,
         chain_id -> Varchar,
@@ -32,7 +55,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     events (id) {
         id -> Int4,
         chain_id -> Int4,
@@ -47,7 +70,17 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
+    messages (id) {
+        id -> Int4,
+        transaction_id -> Int4,
+        messages -> Nullable<Jsonb>,
+        inserted_at -> Timestamp,
+        updated_at -> Nullable<Timestamp>,
+    }
+}
+
+diesel::table! {
     transactions (id) {
         id -> Int4,
         chain_id -> Int4,
@@ -67,9 +100,15 @@ table! {
     }
 }
 
-allow_tables_to_appear_in_same_query!(
+diesel::joinable!(account_balance -> accounts (account_id));
+diesel::joinable!(messages -> transactions (transaction_id));
+
+diesel::allow_tables_to_appear_in_same_query!(
+    account_balance,
+    accounts,
     blocks,
     chains,
     events,
+    messages,
     transactions,
 );

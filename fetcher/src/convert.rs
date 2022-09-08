@@ -83,19 +83,3 @@ impl From<NewTxSchema> for NewTransaction {
         tx.0
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use chrono::{NaiveDate, NaiveDateTime};
-
-    #[test]
-    fn parse_tendermint_time() {
-        let date_format = "YYYY-MM-DDTHH:mm:ss";
-        let time = &"2022-08-04T02:08:43.1201678Z"[..date_format.len()];
-        let parsed = NaiveDateTime::parse_from_str(time, "%Y-%m-%dT%H:%M:%S");
-        assert_eq!(
-            parsed,
-            Ok(NaiveDate::from_ymd(2022, 8, 4).and_hms(2, 8, 43))
-        );
-    }
-}

@@ -46,15 +46,3 @@ impl Database for BackendDB {
         self.client.as_ref().map(|p| p.get().unwrap())
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn connect_database() {
-        let mut db = BackendDB::new(DBConfig::default());
-        let result = db.connect();
-        assert_eq!(result, true);
-    }
-}

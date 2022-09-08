@@ -34,23 +34,3 @@ impl Config {
         Ok(config)
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_read() {
-        let config = Config::from_file("../config.toml".to_string()).unwrap();
-        assert_eq!(
-            config.fetcher,
-            FetcherConfig {
-                chain_id: "gaia".to_string(),
-                tendermint_rpc: "http://localhost:26657/".to_string(),
-                cosmos_grpc: "http://localhost:9090/".to_string(),
-                start_block: 1,
-                try_resume_from_db: true,
-            }
-        );
-    }
-}
