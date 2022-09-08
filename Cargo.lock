@@ -251,7 +251,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cosmoscout-fetcher"
+name = "cosmoscout-engine"
 version = "0.1.0"
 dependencies = [
  "async-trait",
@@ -1426,7 +1426,7 @@ name = "runtime"
 version = "0.1.0"
 dependencies = [
  "clap",
- "cosmoscout-fetcher",
+ "cosmoscout-engine",
  "cosmoscout-models",
  "env_logger",
  "log",

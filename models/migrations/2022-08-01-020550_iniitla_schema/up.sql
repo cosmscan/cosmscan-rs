@@ -102,7 +102,7 @@ CREATE INDEX idx_blocks_block_hash ON blocks(block_hash);
 
 CREATE INDEX idx_accounts_chain_id ON accounts(chain_id);
 
-CREATE INDEX idx_events_chain_id ON events(chain_id);git 
+CREATE INDEX idx_events_chain_id ON events(chain_id);git
 CREATE INDEX idx_events_tx_hash ON events(tx_hash);
 
 CREATE INDEX idx_transactions_chain_id ON events(chain_id);

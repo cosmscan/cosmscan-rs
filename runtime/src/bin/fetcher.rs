@@ -1,5 +1,5 @@
 use clap::Parser;
-use cosmoscout_fetcher::{app::App, config::Config};
+use cosmoscout_engine::{app::App, config::Config};
 use env_logger::Env;
 use log::{error, info};
 
@@ -21,11 +21,11 @@ async fn main() {
     let fetcher = App::new(config).await.unwrap();
     match fetcher.start().await {
         Ok(_) => {
-            info!("fetcher app finished");
+            info!("engine app finished");
         }
         Err(e) => {
             error!("unexpected error during fetching blockchain: {:?}", e);
-            panic!("teardown the fetcher");
+            panic!("teardown the engine");
         }
     }
 }

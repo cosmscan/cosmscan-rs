@@ -60,7 +60,7 @@ impl App<PersistenceStorage<BackendDB>> {
     }
 
     pub async fn start(&self) -> Result<(), Error> {
-        info!("fetcher app started to process");
+        info!("engine app started to process");
         let mut retry_count = 0;
         let fetcher_config = &self.config.fetcher;
 
@@ -91,7 +91,7 @@ impl App<PersistenceStorage<BackendDB>> {
                 Err(e) => {
                     if retry_count > 10 {
                         error!("unexpected error during fetching blockchain: {:?}", e);
-                        panic!("teardown the fetcher");
+                        panic!("teardown the engine");
                     }
                     sleep(Duration::from_millis(1000)).await;
                     retry_count += 1;
@@ -194,7 +194,7 @@ impl App<PersistenceStorage<BackendDB>> {
 
             match latest_block_height {
                 Ok(height) => {
-                    info!("fetcher resumed block height from db {}", height);
+                    info!("engine resumed block height from db {}", height);
                     Ok(Height::from(height as u32).increment())
                 }
                 Err(_) => {

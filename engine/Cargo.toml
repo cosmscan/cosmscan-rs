@@ -1,5 +1,5 @@
 [package]
-name = "cosmoscout-fetcher"
+name = "cosmoscout-engine"
 version = "0.1.0"
 edition = "2021"
 

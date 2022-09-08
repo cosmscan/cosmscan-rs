@@ -22,7 +22,7 @@ $ docker-compose -f docker-compose.flood.yml up
 $ cd models && diesel migration run && cd ..
 
 # this start to run explorer runtime application
-$ RUST_LOG=info cargo run --bin fetcher -- --filename config.toml
+$ RUST_LOG=info cargo run --bin engine -- --filename config.toml
 ```
 
 ### Revoke migration
