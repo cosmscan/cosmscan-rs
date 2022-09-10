@@ -164,14 +164,14 @@ impl StorageReader for PersistenceStorage<BackendDB> {
         todo!()
     }
 
-    fn list_blocks(&self, chain_id: i32, limit: i64, offset: i64) -> Result<Vec<Block>, Error> {
+    fn list_blocks(&self, _chain_id: i32, _limit: i64, _offset: i64) -> Result<Vec<Block>, Error> {
         todo!()
     }
 
     fn list_transactions(
         &self,
-        chain_id: i32,
-        block_number: i64,
+        _chain_id: i32,
+        _block_number: i64,
     ) -> Result<Vec<(Transaction, Vec<Event>)>, Error> {
         todo!()
     }

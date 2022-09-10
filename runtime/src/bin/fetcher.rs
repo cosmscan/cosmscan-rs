@@ -12,12 +12,15 @@ struct Cli {
 
 #[tokio::main]
 async fn main() {
-    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+    // initialize logger
+    env_logger::init();
 
+    // parse command line flags
     let cli: Cli = Cli::parse();
     let config = Config::from_file(cli.filename.clone())
         .unwrap_or_else(|_| panic!("wrong config file location: {}", cli.filename));
 
+    // start a fetcher
     let fetcher = App::new(config).await.unwrap();
     match fetcher.start().await {
         Ok(_) => {
