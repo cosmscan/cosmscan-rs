@@ -2,10 +2,10 @@ use std::str::from_utf8;
 
 use chrono::{NaiveDateTime, Utc};
 use cosmos_sdk_proto::cosmos::tx::v1beta1::GetTxResponse;
-use sha2::Sha256;
 use cosmoscout_models::models::event::{
     NewEvent, TX_TYPE_BEGIN_BLOCK, TX_TYPE_END_BLOCK, TX_TYPE_TRANSACTION,
 };
+use sha2::{Digest, Sha256};
 use tendermint_rpc::endpoint::block_results;
 
 pub fn current_time() -> NaiveDateTime {
