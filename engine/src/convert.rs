@@ -52,6 +52,8 @@ impl From<Block> for NewBlockSchema {
 
 impl From<&GetTxResponse> for NewTxSchema {
     fn from(tx: &GetTxResponse) -> Self {
+        let tx_info = tx.tx.as_ref().unwrap();
+        let tx_body = tx_info.body.as_ref().unwrap();
         let tx_response = tx.tx_response.as_ref().unwrap();
 
         NewTxSchema(NewTransaction {
@@ -63,7 +65,7 @@ impl From<&GetTxResponse> for NewTxSchema {
             tx_data: tx_response.data.clone(),
             raw_log: tx_response.raw_log.clone(),
             info: tx_response.info.clone(),
-            memo: None,
+            memo: Some(tx_body.memo.clone()),
             gas_wanted: tx_response.gas_wanted,
             gas_used: tx_response.gas_used,
             tx_timestamp: tx_response.timestamp.clone(),

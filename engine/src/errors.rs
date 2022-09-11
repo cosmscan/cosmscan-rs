@@ -15,6 +15,15 @@ pub enum Error {
     #[error("failed to connect to the cosmos grpc server")]
     GRPCError(#[from] tonic::transport::Error),
 
+    #[error("tonic status failed")]
+    TonicStatusError(#[from] tonic::Status),
+
+    #[error("serde json error")]
+    InvalidJSONError(#[from] serde_json::Error),
+
+    #[error("failed to call the rest api with reqwest")]
+    RestAPIERror(#[from] reqwest::Error),
+
     #[error("unknown server error")]
     UnknownServerError(tendermint_rpc::Error),
 
