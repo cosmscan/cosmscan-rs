@@ -1,13 +1,13 @@
 use crate::config::FetcherConfig;
 use crate::convert::{NewBlockSchema, NewTxSchema};
 use crate::errors::Error;
-use crate::utils;
+
 use cosmoscout_models::models::chain::Chain;
 use cosmoscout_models::models::event::NewEvent;
 use log::info;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tendermint::abci::transaction::Hash;
+
 use tendermint_rpc::endpoint::block_results;
 use tendermint_rpc::Client;
 
@@ -71,7 +71,7 @@ impl Fetcher {
             );
 
             // get block result from given height
-            let block_ret_resp: block_results::Response =
+            let _block_ret_resp: block_results::Response =
                 self.tendermint_client.block_results(block_height).await?;
 
             self.journal.insert(

@@ -1,6 +1,6 @@
 use clap::Parser;
 use cosmoscout_engine::{app::App, config::Config};
-use env_logger::Env;
+
 use log::{error, info};
 
 #[derive(Parser)]
