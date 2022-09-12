@@ -5,9 +5,9 @@ use crate::rawdata::{RawBlock, RawEvent, RawTx};
 use crate::utils::bytes_to_tx_hash;
 
 use cosmoscout_models::models::event::{
-    NewEvent, TX_TYPE_BEGIN_BLOCK, TX_TYPE_END_BLOCK, TX_TYPE_TRANSACTION,
+    TX_TYPE_BEGIN_BLOCK, TX_TYPE_END_BLOCK, TX_TYPE_TRANSACTION,
 };
-use log::{debug, info};
+use log::info;
 use std::collections::HashMap;
 use std::str::from_utf8;
 use std::sync::Arc;
