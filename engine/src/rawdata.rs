@@ -27,6 +27,7 @@ pub struct RawTx {
     pub gas_wanted: i64,
     pub gas_used: i64,
     pub tx_timestamp: String,
+    pub messages: Vec<String>,
 }
 
 /// Prepresents a block as inlined format.
@@ -105,6 +106,7 @@ impl From<&GetTxResponse> for RawTx {
             gas_wanted: tx_response.gas_wanted,
             gas_used: tx_response.gas_used,
             tx_timestamp: tx_response.timestamp.clone(),
+            messages: vec![],
         }
     }
 }

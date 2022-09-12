@@ -5,8 +5,9 @@ website = "https://cosmos.network/"
 
 [fetcher]
 chain_id = "gaia"
-tendermint_rpc = "http://localhost:26657/"
-cosmos_grpc = "http://localhost:9090/"
+tendermint_rpc_endpoint = "http://localhost:26657"
+grpc_endpoint = "http://localhost:9090"
+rest_api_endpoint = "http://localhost:1317"
 start_block = 1
 try_resume_from_db = true
 

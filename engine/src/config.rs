@@ -21,8 +21,9 @@ pub struct ChainConfig {
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct FetcherConfig {
     pub chain_id: String,
-    pub tendermint_rpc: String,
-    pub cosmos_grpc: String,
+    pub tendermint_rpc_endpoint: String,
+    pub grpc_endpoint: String,
+    pub rest_api_endpoint: String,
     pub start_block: u32,
     pub try_resume_from_db: bool,
 }

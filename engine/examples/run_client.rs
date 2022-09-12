@@ -5,7 +5,7 @@ use cosmoscout_engine::{
     errors::Error,
     utils::bytes_to_tx_hash,
 };
-use cosmoscout_models::models::event;
+
 use futures::future;
 use log::info;
 use tokio::sync::Mutex;
