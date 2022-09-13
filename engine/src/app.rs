@@ -3,8 +3,8 @@ use crate::fetcher::Fetcher;
 use crate::messages::MsgCommittedBlock;
 use crate::{config::Config, errors::Error};
 
-use cosmoscout_models::storage::StorageReader;
-use cosmoscout_models::{
+use cosmscan_models::storage::StorageReader;
+use cosmscan_models::{
     db::BackendDB,
     storage::{PersistenceStorage, StorageWriter},
 };

@@ -1,5 +1,5 @@
 use clap::Parser;
-use cosmoscout_engine::{app::App, config::Config};
+use cosmscan_engine::{app::App, config::Config};
 
 use log::{error, info};
 

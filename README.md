@@ -1,5 +1,5 @@
-## Cosmoscout
-Cosmoscout is an explorer service for cosmos based blockchain.
+## Cosmscan
+Cosmscan is an explorer service for cosmos based blockchain.
 
 It's inherently built for enterprise-level.
 

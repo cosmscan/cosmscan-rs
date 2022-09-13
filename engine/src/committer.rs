@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use cosmoscout_models::{
+use cosmscan_models::{
     config::DBConfig,
     db::BackendDB,
     models::{
@@ -95,7 +95,7 @@ impl Committer {
             Err(e) => {
                 // match with not found error
                 match e {
-                    cosmoscout_models::errors::Error::NotFound => {
+                    cosmscan_models::errors::Error::NotFound => {
                         // create a new chain info
                         let new_chain_id = self.storage.insert_chain(&NewChain {
                             chain_id: self.chain_config.chain_id.clone(),

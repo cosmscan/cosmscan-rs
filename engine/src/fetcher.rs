@@ -4,7 +4,7 @@ use crate::config::FetcherConfig;
 use crate::errors::Error;
 use crate::messages::{MsgCommittedBlock, RawBlock, RawEvent, RawTx};
 
-use cosmoscout_models::models::event::{
+use cosmscan_models::models::event::{
     TX_TYPE_BEGIN_BLOCK, TX_TYPE_END_BLOCK, TX_TYPE_TRANSACTION,
 };
 use log::{error, info};

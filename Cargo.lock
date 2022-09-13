@@ -251,14 +251,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "cosmoscout-engine"
+name = "cosmscan-engine"
 version = "0.1.0"
 dependencies = [
  "async-trait",
  "chrono",
  "clap",
  "cosmos-sdk-proto",
- "cosmoscout-models",
+ "cosmscan-models",
  "env_logger",
  "futures",
  "log",
@@ -275,7 +275,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cosmoscout-models"
+name = "cosmscan-models"
 version = "0.1.0"
 dependencies = [
  "chrono",
@@ -1427,8 +1427,8 @@ name = "runtime"
 version = "0.1.0"
 dependencies = [
  "clap",
- "cosmoscout-engine",
- "cosmoscout-models",
+ "cosmscan-engine",
+ "cosmscan-models",
  "env_logger",
  "log",
  "serde",

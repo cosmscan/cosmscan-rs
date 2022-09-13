@@ -1,4 +1,4 @@
-use cosmoscout_models::config::DBConfig;
+use cosmscan_models::config::DBConfig;
 use serde::Deserialize;
 use std::error::Error;
 use std::fs;

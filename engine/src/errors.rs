@@ -9,7 +9,7 @@ pub enum Error {
     FetchingTransactionFailed,
 
     #[error("database model error")]
-    DBError(#[from] cosmoscout_models::errors::Error),
+    DBError(#[from] cosmscan_models::errors::Error),
 
     #[error("failed to conenct with tendermint rpc client")]
     RPCError(tendermint_rpc::Error),

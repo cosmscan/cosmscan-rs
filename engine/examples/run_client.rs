@@ -1,6 +1,6 @@
 use std::{env::args, sync::Arc};
 
-use cosmoscout_engine::{
+use cosmscan_engine::{
     client::{Client, ClientConfig},
     errors::Error, bytes_to_tx_hash,
 };

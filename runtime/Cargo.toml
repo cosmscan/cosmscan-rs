@@ -11,6 +11,6 @@ log = "0.4.14"
 toml = "0.5.9"
 serde = { version = "1.0", features = ["derive"] }
 clap = { version = "3.0.0", features = ["derive"] }
-cosmoscout-models = { path = "../models", version = "0.1.0" }
-cosmoscout-engine = { path = "../engine", version = "0.1.0" }
+cosmscan-models = { path = "../models", version = "0.1.0" }
+cosmscan-engine = { path = "../engine", version = "0.1.0" }
 tokio = { version = "1", features = ["full"] }
