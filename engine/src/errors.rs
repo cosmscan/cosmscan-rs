@@ -1,3 +1,5 @@
+use std::str::Utf8Error;
+
 use tendermint_rpc::error::ErrorDetail;
 use thiserror::Error;
 
@@ -27,8 +29,17 @@ pub enum Error {
     #[error("unknown server error")]
     UnknownServerError(tendermint_rpc::Error),
 
+    #[error("failed to convert attribute to the string")]
+    Utf8ConversionError(#[from] Utf8Error),
+
     #[error("start block must be greater than 0")]
     StartBlockMustBeGreaterThanZero,
+
+    #[error("Unexpected error")]
+    UnexpectedError,
+
+    #[error("unknown error ${0}")]
+    Other(String)
 }
 
 impl From<tendermint_rpc::Error> for Error {

@@ -4,16 +4,16 @@ use crate::errors::Error;
 use crate::rawdata::{RawBlock, RawEvent, RawTx};
 use crate::utils::bytes_to_tx_hash;
 
+use cosmos_sdk_proto::cosmos::distribution::v1beta1::msg_server::Msg;
 use cosmoscout_models::models::event::{
     TX_TYPE_BEGIN_BLOCK, TX_TYPE_END_BLOCK, TX_TYPE_TRANSACTION,
 };
-use log::info;
+use log::{error, info};
 use std::collections::HashMap;
 use std::str::from_utf8;
 use std::sync::Arc;
 use std::time::Duration;
 use tendermint::abci;
-use tokio::sync::mpsc::channel;
 use tokio::sync::Mutex;
 
 /// MsgCommittedBlock is a message which indicates committed block.
@@ -67,141 +67,154 @@ impl Fetcher {
         let journal: Arc<Mutex<HashMap<u64, MsgCommittedBlock>>> =
             Arc::new(Mutex::new(HashMap::new()));
         let mut checkpoint_block = current_block;
-        let result_channel = self.sender.clone();
 
-        let _journal = journal.clone();
-        tokio::spawn(async move {
-            // send journal data to result channel
-            loop {
-                let mut journal = _journal.lock().await;
-                if let Some(committed_block) = journal.get(&checkpoint_block) {
-                    result_channel.send(committed_block.clone()).await.unwrap();
-                    journal.remove(&checkpoint_block);
-                    checkpoint_block += 1;
+        tokio::spawn({
+            let _journal = journal.clone();
+            let sender = self.sender.clone();
+            async move {
+                // send journal data to result channel
+                loop {
+                    let mut journal = _journal.lock().await;
+                    if let Some(committed_block) = journal.get(&checkpoint_block) {
+                        sender.send(committed_block.clone()).await.unwrap();
+                        journal.remove(&checkpoint_block);
+                        checkpoint_block += 1;
+                    }
+
+                    tokio::time::sleep(Duration::from_millis(200)).await;
                 }
-
-                tokio::time::sleep(Duration::from_millis(200)).await;
             }
         });
 
         loop {
-            // get block info from given height
-            let block = self.client.lock().await.get_block(current_block).await?;
-            info!(
-                "fetcher listens block_number:{}, hash: {}",
-                block.header.height,
-                block.header.hash(),
-            );
+            match self.committed_block_at(current_block).await {
+                Ok(committed_block) => {
+                    // insert to the journal and print size of journal
+                    let mut journal = journal.lock().await;
+                    info!(
+                        "commit block | block_number: {}, hash: {}",
+                        current_block,
+                        committed_block.block.block_hash.clone(),
+                    );
+                    info!("journal size: {}", journal.len());
+                    journal.insert(current_block, committed_block);
+                    current_block += 1;
+                }
+                Err(e) => {
+                    error!(
+                        "failed to get committed block at given height: {}, err: {:?}",
+                        current_block, e
+                    );
+                    tokio::time::sleep(Duration::from_millis(1000)).await;
+                }
+            }
+        }
+    }
 
-            // get block result from given height
-            let block_result = self
-                .client
-                .clone()
-                .lock()
-                .await
-                .get_block_result(current_block)
-                .await?;
+    async fn committed_block_at(&self, block_height: u64) -> Result<MsgCommittedBlock, Error> {
+        // get block info from given height
+        let block = self.client.lock().await.get_block(block_height).await?;
+        info!(
+            "found new block | block_number:{}, hash: {}",
+            block.header.height,
+            block.header.hash(),
+        );
 
-            // fetch trasnactions
-            let mut transactions: Vec<RawTx> = vec![];
-            let mut events: Vec<RawEvent> = vec![];
+        // get block result from given height
+        let block_result = self
+            .client
+            .lock()
+            .await
+            .get_block_result(block_height)
+            .await?;
 
-            let (tx_sender, mut tx_receiver) = channel::<RawTx>(100);
-            let (evt_sender, mut event_receiver) = channel::<RawEvent>(100);
+        // fetch trasnactions
+        let mut transactions: Vec<RawTx> = vec![];
+        let mut events: Vec<RawEvent> = vec![];
 
-            // check block data is empty list
-            if block.data.iter().len() == 0 {
-                drop(tx_sender);
-                drop(evt_sender);
-            } else {
-                let handles = block.data.iter().map(|data| {
-                    let tx_hash = bytes_to_tx_hash(data);
-                    let client = self.client.clone();
+        let future_transactions = block.data.iter().map(bytes_to_tx_hash).map(|tx_hash| {
+            tokio::spawn({
+                let client = self.client.clone();
+                async move { client.lock().await.get_transaction(tx_hash).await }
+            })
+        });
 
-                    let tx_sender = tx_sender.clone();
-                    let evt_sender = evt_sender.clone();
-
-                    tokio::spawn(async move {
-                        let tx = client
-                            .lock()
-                            .await
-                            .get_transaction(tx_hash.clone())
-                            .await
-                            .unwrap();
-                        let mut raw_tx = RawTx::from(&tx);
-
-                        let messages = client
-                            .lock()
-                            .await
-                            .get_tx_messages(tx_hash.clone())
-                            .await
-                            .unwrap();
-                        raw_tx.messages.extend(messages);
-
-                        if let Some(tx_resp) = tx.tx_response {
-                            for evt in tx_resp.events.iter() {
-                                for attr in evt.attributes.iter() {
-                                    let raw_event = RawEvent {
-                                        tx_type: TX_TYPE_TRANSACTION,
-                                        tx_hash: Some(tx_hash.clone()),
-                                        event_type: evt.r#type.clone(),
-                                        event_key: from_utf8(&attr.key).unwrap().to_string(),
-                                        event_value: from_utf8(&attr.value).unwrap().to_string(),
-                                        indexed: attr.index,
-                                    };
-                                    evt_sender.send(raw_event).await.unwrap();
-                                }
+        for result in futures::future::join_all(future_transactions).await {
+            match result {
+                Ok(Ok(tx)) => {
+                    if let Some(tx_resp) = &tx.tx_response {
+                        for evt in tx_resp.events.iter() {
+                            for attr in evt.attributes.iter() {
+                                let raw_event = RawEvent {
+                                    tx_type: TX_TYPE_TRANSACTION,
+                                    tx_hash: Some(tx_resp.txhash.clone()),
+                                    event_type: evt.r#type.clone(),
+                                    event_key: from_utf8(&attr.key)?.to_string(),
+                                    event_value: from_utf8(&attr.value)?.to_string(),
+                                    indexed: attr.index,
+                                };
+                                events.push(raw_event);
                             }
                         }
+                    }
 
-                        tx_sender.send(raw_tx).await.unwrap();
-                    })
-                });
-
-                for h in handles {
-                    h.await.unwrap();
+                    transactions.push(RawTx::from(&tx));
                 }
-
-                drop(tx_sender);
-                drop(evt_sender);
-            }
-            loop {
-                tokio::select! {
-                    Some(tx) = tx_receiver.recv() => {
-                        transactions.push(tx);
-                    }
-                    Some(evt) = event_receiver.recv() => {
-                        events.push(evt);
-                    }
-                    else => {
-                        break;
-                    }
+                Ok(Err(err)) => {
+                    return Err(err);
+                }
+                Err(e) => {
+                    return Err(Error::Other(e.to_string()));
                 }
             }
-
-            // expand block result to get begin block & end block events
-            if let Some(begin_block_events) = block_result.begin_block_events {
-                let begin_blocks =
-                    Self::convert_block_events(begin_block_events, TX_TYPE_BEGIN_BLOCK);
-                events.extend(begin_blocks);
-            }
-
-            if let Some(end_block_events) = block_result.end_block_events {
-                let end_blocks = Self::convert_block_events(end_block_events, TX_TYPE_END_BLOCK);
-                events.extend(end_blocks);
-            }
-
-            journal.clone().lock().await.insert(
-                current_block,
-                MsgCommittedBlock {
-                    block: RawBlock::from(block),
-                    txs: transactions,
-                    events: events,
-                },
-            );
-
-            current_block += 1;
         }
+
+        // wrap transactions with messages
+        let tx_with_messages = transactions.into_iter().map(|tx| {
+            let client = self.client.clone();
+            tokio::spawn(async move {
+                let messages = client
+                    .lock()
+                    .await
+                    .get_tx_messages(tx.transaction_hash.clone())
+                    .await?;
+                let mut _tx = tx.clone();
+                _tx.messages.extend(messages);
+                Ok::<RawTx, Error>(_tx)
+            })
+        });
+
+        let mut transactions: Vec<RawTx> = vec![];
+        for result in futures::future::join_all(tx_with_messages).await {
+            match result {
+                Err(e) => {
+                    return Err(Error::Other(e.to_string()));
+                }
+                Ok(Err(e)) => {
+                    return Err(e);
+                }
+                Ok(Ok(tx)) => {
+                    transactions.push(tx);
+                }
+            }
+        }
+
+        // expand block result to get begin block & end block events
+        if let Some(begin_block_events) = block_result.begin_block_events {
+            let begin_blocks = Self::convert_block_events(begin_block_events, TX_TYPE_BEGIN_BLOCK);
+            events.extend(begin_blocks);
+        }
+
+        if let Some(end_block_events) = block_result.end_block_events {
+            let end_blocks = Self::convert_block_events(end_block_events, TX_TYPE_END_BLOCK);
+            events.extend(end_blocks);
+        }
+
+        Ok(MsgCommittedBlock {
+            block: RawBlock::from(block),
+            txs: transactions,
+            events,
+        })
     }
 
     fn convert_block_events(events: Vec<abci::Event>, tx_type: i16) -> Vec<RawEvent> {
