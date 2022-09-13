@@ -39,7 +39,7 @@ pub enum Error {
     UnexpectedError,
 
     #[error("unknown error ${0}")]
-    Other(String)
+    Other(String),
 }
 
 impl From<tendermint_rpc::Error> for Error {

@@ -1,13 +1,8 @@
-use std::str::from_utf8;
-
 use cosmos_sdk_proto::cosmos::tx::v1beta1::{service_client, GetTxResponse};
-use cosmoscout_models::models::event::{
-    TX_TYPE_BEGIN_BLOCK, TX_TYPE_END_BLOCK, TX_TYPE_TRANSACTION,
-};
-use tendermint::{abci, block};
+use tendermint::block;
 use tendermint_rpc::{endpoint::block_results, Client as tm_client};
 
-use crate::{errors::Error, messages::RawEvent};
+use crate::errors::Error;
 
 pub struct ClientConfig {
     pub tendermint_rpc_endpoint: String,

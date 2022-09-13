@@ -11,7 +11,7 @@ pub struct Config {
     pub db: DBConfig,
 }
 
-#[derive(Debug, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct ChainConfig {
     pub chain_id: String,
     pub chain_name: String,
@@ -21,7 +21,6 @@ pub struct ChainConfig {
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct FetcherConfig {
-    pub chain_id: String,
     pub tendermint_rpc_endpoint: String,
     pub grpc_endpoint: String,
     pub rest_api_endpoint: String,

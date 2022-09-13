@@ -1,13 +1,13 @@
 use crate::client::{Client, ClientConfig};
 use crate::config::FetcherConfig;
 use crate::errors::Error;
-use crate::messages::{RawBlock, RawEvent, RawTx, MsgCommittedBlock};
-use crate::utils::bytes_to_tx_hash;
+use crate::messages::{MsgCommittedBlock, RawBlock, RawEvent, RawTx};
 
 use cosmoscout_models::models::event::{
     TX_TYPE_BEGIN_BLOCK, TX_TYPE_END_BLOCK, TX_TYPE_TRANSACTION,
 };
 use log::{error, info};
+use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::str::from_utf8;
 use std::sync::Arc;
@@ -122,12 +122,16 @@ impl Fetcher {
         let mut transactions: Vec<RawTx> = vec![];
         let mut events: Vec<RawEvent> = vec![];
 
-        let future_transactions = block.data.iter().map(bytes_to_tx_hash).map(|tx_hash| {
-            tokio::spawn({
-                let client = self.client.clone();
-                async move { client.lock().await.get_transaction(tx_hash).await }
-            })
-        });
+        let future_transactions = block
+            .data
+            .iter()
+            .map(Self::bytes_to_tx_hash)
+            .map(|tx_hash| {
+                tokio::spawn({
+                    let client = self.client.clone();
+                    async move { client.lock().await.get_transaction(tx_hash).await }
+                })
+            });
 
         for result in futures::future::join_all(future_transactions).await {
             match result {
@@ -222,5 +226,12 @@ impl Fetcher {
             })
             .flatten()
             .collect::<Vec<RawEvent>>()
+    }
+
+    fn bytes_to_tx_hash(data: impl AsRef<[u8]>) -> String {
+        let mut hasher = Sha256::new();
+        hasher.update(data);
+        let tx_hash = hasher.finalize();
+        format!("{:X}", tx_hash)
     }
 }

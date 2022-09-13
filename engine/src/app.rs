@@ -1,4 +1,5 @@
-use crate::fetcher::{Fetcher};
+use crate::committer::Committer;
+use crate::fetcher::Fetcher;
 use crate::messages::MsgCommittedBlock;
 use crate::{config::Config, errors::Error};
 
@@ -25,7 +26,7 @@ impl App<PersistenceStorage<BackendDB>> {
     }
 
     pub async fn start(&self) -> Result<(), Error> {
-        let (tx, mut rv) = mpsc::channel::<MsgCommittedBlock>(100);
+        let (tx, rv) = mpsc::channel::<MsgCommittedBlock>(100);
 
         let fetcher = Fetcher::new(
             self.config.fetcher.clone(),
@@ -34,13 +35,18 @@ impl App<PersistenceStorage<BackendDB>> {
         )
         .await?;
 
+        let mut committer = Committer::new(
+            self.config.db.clone(),
+            self.config.chain.clone(),
+            rv,
+            u64::from(self.config.fetcher.start_block),
+        );
+
         tokio::spawn(async move {
             fetcher.run_fetch_loop().await.unwrap();
         });
 
-        while let Some(msg) = rv.recv().await {
-            info!("received committed block: {:?}", msg.block.block_hash);
-        }
+        committer.start().await?;
 
         Ok(())
     }
