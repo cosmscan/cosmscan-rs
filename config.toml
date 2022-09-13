@@ -1,16 +1,26 @@
+[engine]
+# enable fetch account & balance and commit to the database.
+fetcher_account_enabled = true
+
 [chain]
 chain_id = "gaia"
 chain_name = "cosmos"
 website = "https://cosmos.network/"
 
 [fetcher]
-chain_id = "gaia"
 tendermint_rpc_endpoint = "http://localhost:26657"
 grpc_endpoint = "http://localhost:9090"
 rest_api_endpoint = "http://localhost:1317"
+
+# start block is the block height which fetcher start to find blocks.
+# if there's committed block in database, fetcher will find the next block of the latest committed block.
+# In that case, this value is ignored.
 start_block = 1
+
+# if thisv value is true, fetcher will use start block as the latest committed block.
 try_resume_from_db = true
 
+# database information
 [db]
 host = "localhost"
 port = 5432

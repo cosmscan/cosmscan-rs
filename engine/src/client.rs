@@ -7,7 +7,7 @@ use cosmoscout_models::models::event::{
 use tendermint::{abci, block};
 use tendermint_rpc::{endpoint::block_results, Client as tm_client};
 
-use crate::{errors::Error, rawdata::RawEvent};
+use crate::{errors::Error, messages::RawEvent};
 
 pub struct ClientConfig {
     pub tendermint_rpc_endpoint: String,
@@ -94,72 +94,5 @@ impl Client {
             .collect();
 
         Ok(messages)
-    }
-
-    /// Extract events information from transactions and block.
-    ///
-    /// It returns list of events.
-    pub fn extract_events(
-        &self,
-        txes: Vec<&GetTxResponse>,
-        block_result: &block_results::Response,
-    ) -> Vec<RawEvent> {
-        let mut result: Vec<RawEvent> = vec![];
-        let convert_block_events = |events: Vec<abci::Event>, tx_type: i16| {
-            events
-                .iter()
-                .map(|evt| {
-                    evt.attributes.iter().map(|attr| RawEvent {
-                        tx_type: tx_type,
-                        tx_hash: None,
-                        event_type: evt.type_str.clone(),
-                        event_key: attr.key.to_string(),
-                        event_value: attr.value.to_string(),
-                        indexed: false,
-                    })
-                })
-                .flatten()
-                .collect::<Vec<RawEvent>>()
-        };
-
-        let tx_events = txes
-            .into_iter()
-            .map(|tx| tx.tx_response.as_ref().clone().unwrap())
-            .map(|tx| {
-                tx.clone()
-                    .events
-                    .into_iter()
-                    .map(|event| {
-                        event
-                            .clone()
-                            .attributes
-                            .iter()
-                            .map(|attr| RawEvent {
-                                tx_type: TX_TYPE_TRANSACTION,
-                                tx_hash: Some(tx.txhash.clone()),
-                                event_type: event.r#type.clone(),
-                                event_key: from_utf8(&attr.key).unwrap().to_string(),
-                                event_value: from_utf8(&attr.value).unwrap().to_string(),
-                                indexed: attr.index,
-                            })
-                            .collect::<Vec<_>>()
-                    })
-                    .flatten()
-            })
-            .flatten()
-            .collect::<Vec<_>>();
-
-        if let Some(begin_block_events) = block_result.begin_block_events.clone() {
-            let evts = convert_block_events(begin_block_events, TX_TYPE_BEGIN_BLOCK);
-            result.extend(evts);
-        }
-
-        if let Some(end_block_events) = block_result.end_block_events.clone() {
-            let evts = convert_block_events(end_block_events, TX_TYPE_END_BLOCK);
-            result.extend(evts);
-        }
-
-        result.extend(tx_events);
-        return result;
     }
 }

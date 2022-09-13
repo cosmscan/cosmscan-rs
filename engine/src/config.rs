@@ -5,6 +5,7 @@ use std::fs;
 
 #[derive(Debug, PartialEq, Deserialize)]
 pub struct Config {
+    pub engine: EngineConfig,
     pub fetcher: FetcherConfig,
     pub chain: ChainConfig,
     pub db: DBConfig,
@@ -26,6 +27,11 @@ pub struct FetcherConfig {
     pub rest_api_endpoint: String,
     pub start_block: u32,
     pub try_resume_from_db: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub struct EngineConfig {
+    pub fetcher_account_enabled: bool,
 }
 
 impl Config {

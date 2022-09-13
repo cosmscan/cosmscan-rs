@@ -1,10 +1,9 @@
 use crate::client::{Client, ClientConfig};
 use crate::config::FetcherConfig;
 use crate::errors::Error;
-use crate::rawdata::{RawBlock, RawEvent, RawTx};
+use crate::messages::{RawBlock, RawEvent, RawTx, MsgCommittedBlock};
 use crate::utils::bytes_to_tx_hash;
 
-use cosmos_sdk_proto::cosmos::distribution::v1beta1::msg_server::Msg;
 use cosmoscout_models::models::event::{
     TX_TYPE_BEGIN_BLOCK, TX_TYPE_END_BLOCK, TX_TYPE_TRANSACTION,
 };
@@ -15,15 +14,6 @@ use std::sync::Arc;
 use std::time::Duration;
 use tendermint::abci;
 use tokio::sync::Mutex;
-
-/// MsgCommittedBlock is a message which indicates committed block.
-/// It's intended to be sent to the sender channel of [`Fetcher`].
-#[derive(Debug, Clone, PartialEq)]
-pub struct MsgCommittedBlock {
-    pub block: RawBlock,
-    pub txs: Vec<RawTx>,
-    pub events: Vec<RawEvent>,
-}
 
 /// Fetcher fetches blocks, transactions, and events from Tendermint RPC and Cosmos REST API
 pub struct Fetcher {

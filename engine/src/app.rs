@@ -1,4 +1,5 @@
-use crate::fetcher::{Fetcher, MsgCommittedBlock};
+use crate::fetcher::{Fetcher};
+use crate::messages::MsgCommittedBlock;
 use crate::{config::Config, errors::Error};
 
 use cosmoscout_models::storage::StorageReader;

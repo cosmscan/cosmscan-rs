@@ -1,6 +1,15 @@
 use chrono::NaiveDateTime;
 use cosmos_sdk_proto::cosmos::tx::v1beta1::GetTxResponse;
 
+/// MsgCommittedBlock is a message which indicates committed block.
+/// It's intended to be sent to the sender channel of [`Fetcher`].
+#[derive(Debug, Clone, PartialEq)]
+pub struct MsgCommittedBlock {
+    pub block: RawBlock,
+    pub txs: Vec<RawTx>,
+    pub events: Vec<RawEvent>,
+}
+
 /// Represents a event occurred in the cosmos blockchain.
 /// It's usually emitted by executing transaction & proposing block.
 #[derive(Debug, Clone, PartialEq)]
