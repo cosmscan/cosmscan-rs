@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS events (
     chain_id INT NOT NULL,
     tx_type SMALLINT NOT NULL, -- 0: transaction, 1: begin_block, 2: after_block
     tx_hash VARCHAR(256),      -- it can be null
+    block_height BIGINT NOT NULL,
     event_type VARCHAR(256) NOT NULL,
     event_key VARCHAR(256) NOT NULL,
     event_value VARCHAR(256) NOT NULL,

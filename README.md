@@ -3,6 +3,7 @@ Cosmoscout is an explorer service for cosmos based blockchain.
 
 It's inherently built for enterprise-level.
 
+## Setting up the Database.
 ### Install diesel
 ```shell
 # if you're on linux OS, must install prerequisite of postgresql dev tools,
@@ -12,7 +13,19 @@ $ sudo apt install libpq-dev
 $ cargo install diesel_cli --no-default-features --features postgres
 ```
 
-### Run on localhost for test
+### Create set of tables.
+```shell
+$ cd models && diesel migration run && cd ..
+```
+
+If you want to create tables to remote database, not local, Change the DSN in `models/.env` file before running the above command
+
+### Revoke migration
+```shell
+$ diesel migration redo
+```
+
+## Run on localhost for test
 ```shell
 # this command runs simple gaiad app & postgres database
 # when you run services via this scripts, sample tx will be automatically sent every seconds.
@@ -25,14 +38,7 @@ $ cd models && diesel migration run && cd ..
 $ RUST_LOG=info cargo run --bin engine -- --filename config.toml
 ```
 
-### Revoke migration
-```shell
-$ diesel migration redo
-```
-
-### Crawling tendermint data
-At this time, I crawled only block, transaction and events.
-
-If you need more, Please open the issue.
+## Contribution Guidelines
+If you need more feature, Please open the issue.
 
 ![Database](./docs/images/db.png)
