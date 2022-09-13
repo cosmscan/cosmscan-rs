@@ -8,7 +8,7 @@ use cosmoscout_models::{
     db::BackendDB,
     storage::{PersistenceStorage, StorageWriter},
 };
-use log::info;
+
 use tokio::sync::mpsc;
 
 /// App is for fetching ABCI blocks, transactions and logs.

@@ -1,3 +1,4 @@
+use crate::bytes_to_tx_hash;
 use crate::client::{Client, ClientConfig};
 use crate::config::FetcherConfig;
 use crate::errors::Error;
@@ -125,7 +126,7 @@ impl Fetcher {
         let future_transactions = block
             .data
             .iter()
-            .map(Self::bytes_to_tx_hash)
+            .map(bytes_to_tx_hash)
             .map(|tx_hash| {
                 tokio::spawn({
                     let client = self.client.clone();
@@ -226,12 +227,5 @@ impl Fetcher {
             })
             .flatten()
             .collect::<Vec<RawEvent>>()
-    }
-
-    fn bytes_to_tx_hash(data: impl AsRef<[u8]>) -> String {
-        let mut hasher = Sha256::new();
-        hasher.update(data);
-        let tx_hash = hasher.finalize();
-        format!("{:X}", tx_hash)
     }
 }

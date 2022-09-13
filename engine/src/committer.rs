@@ -16,7 +16,7 @@ use tokio::{
     sync::{mpsc, Mutex},
     task::JoinHandle,
 };
-use tonic::include_file_descriptor_set;
+
 
 use crate::{config::ChainConfig, current_time, errors::Error, messages::MsgCommittedBlock};
 

@@ -2,8 +2,7 @@ use std::{env::args, sync::Arc};
 
 use cosmoscout_engine::{
     client::{Client, ClientConfig},
-    errors::Error,
-    utils::bytes_to_tx_hash,
+    errors::Error, bytes_to_tx_hash,
 };
 
 use futures::future;
@@ -35,6 +34,7 @@ async fn main() -> Result<(), Error> {
         .await
         .get_block_result(block_height)
         .await?;
+        
     let txes = block.data.iter().map(|d| bytes_to_tx_hash(d)).map(|hash| {
         let client = client.clone();
         async move { client.lock().await.get_transaction(hash).await }
@@ -64,16 +64,6 @@ async fn main() -> Result<(), Error> {
         .iter()
         .map(|tx| tx.as_ref().unwrap())
         .collect::<Vec<_>>();
-    let raw_events = client
-        .clone()
-        .lock()
-        .await
-        .extract_events(raw_txes, &block_result);
-
-    info!("transaction events");
-    for event in raw_events.iter() {
-        info!("event: {:?}", event);
-    }
 
     info!("transaction messages");
     for tx in txes_infos.iter() {
