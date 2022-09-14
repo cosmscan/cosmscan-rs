@@ -1,17 +1,16 @@
-use crate::bytes_to_tx_hash;
+
 use crate::config::FetcherConfig;
 use crate::errors::Error;
 use crate::messages::MsgCommittedBlock;
 
 use cosmos_client::response;
-use cosmscan_models::models::event::{TX_TYPE_BEGIN_BLOCK, TX_TYPE_END_BLOCK, TX_TYPE_TRANSACTION};
+
 use log::{error, info};
-use sha2::{Digest, Sha256};
 use std::collections::HashMap;
-use std::str::from_utf8;
+
 use std::sync::Arc;
 use std::time::Duration;
-use tendermint::abci;
+
 use tokio::sync::Mutex;
 
 /// Fetcher fetches blocks, transactions, and events from Tendermint RPC and Cosmos REST API

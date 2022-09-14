@@ -1,6 +1,6 @@
 use std::str::Utf8Error;
 
-use tendermint_rpc::error::ErrorDetail;
+
 use thiserror::Error;
 
 #[derive(Error, Debug)]

@@ -7,7 +7,7 @@ use tendermint_rpc::Client as tm_client;
 use crate::{
     bytes_to_tx_hash, convert_block_events,
     errors::Error,
-    response::{self, EventType, TransactionResp},
+    response::{self, EventType},
 };
 
 pub struct ClientConfig {

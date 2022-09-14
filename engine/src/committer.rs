@@ -6,12 +6,12 @@ use cosmscan_models::{
     db::BackendDB,
     models::{
         block::NewBlock,
-        chain::{Chain, NewChain},
+        chain::{Chain},
         event::{NewEvent, TX_TYPE_BEGIN_BLOCK, TX_TYPE_END_BLOCK, TX_TYPE_TRANSACTION},
         message::NewMessage,
         transaction::NewTransaction,
     },
-    storage::{PersistenceStorage, StorageReader, StorageWriter},
+    storage::{PersistenceStorage, StorageWriter},
 };
 use log::{error, info};
 use tokio::{
