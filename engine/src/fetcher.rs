@@ -1,7 +1,7 @@
 use crate::bytes_to_tx_hash;
 use crate::config::FetcherConfig;
 use crate::errors::Error;
-use crate::messages::{MsgCommittedBlock, RawBlock, RawEvent, RawTx};
+use crate::messages::{MsgCommittedBlock};
 
 use cosmos_client::response;
 use cosmscan_models::models::event::{TX_TYPE_BEGIN_BLOCK, TX_TYPE_END_BLOCK, TX_TYPE_TRANSACTION};
@@ -19,7 +19,7 @@ pub struct Fetcher {
     pub client: Arc<Mutex<cosmos_client::client::Client>>,
     pub config: FetcherConfig,
     pub sender: tokio::sync::mpsc::Sender<MsgCommittedBlock>,
-    pub start_block: u64,
+    pub start_block: i64,
 }
 
 impl Fetcher {
@@ -27,7 +27,7 @@ impl Fetcher {
     pub async fn new(
         config: FetcherConfig,
         sender: tokio::sync::mpsc::Sender<MsgCommittedBlock>,
-        start_block: u64,
+        start_block: i64,
     ) -> Result<Self, Error> {
         let client = cosmos_client::client::Client::new(cosmos_client::client::ClientConfig {
             tendermint_rpc_endpoint: config.tendermint_rpc_endpoint.clone(),
@@ -53,7 +53,7 @@ impl Fetcher {
         }
 
         let mut current_block = self.start_block;
-        let journal: Arc<Mutex<HashMap<u64, MsgCommittedBlock>>> =
+        let journal: Arc<Mutex<HashMap<i64, MsgCommittedBlock>>> =
             Arc::new(Mutex::new(HashMap::new()));
         let mut checkpoint_block = current_block;
 
@@ -100,7 +100,7 @@ impl Fetcher {
         }
     }
 
-    async fn committed_block_at(&self, block_height: u64) -> Result<MsgCommittedBlock, Error> {
+    async fn committed_block_at(&self, block_height: i64) -> Result<MsgCommittedBlock, Error> {
         // get block info from given height
         let (block, tx_hashes) = self.client.lock().await.get_block(block_height).await?;
         info!(
@@ -123,21 +123,21 @@ impl Fetcher {
         events.extend(block_result.begin_block_events);
         events.extend(block_result.end_block_events);
 
-        let future_transactions = tx_hashes.iter().map(|tx_hash| {
+        let future_transactions = tx_hashes.into_iter().map(|tx_hash| {
             tokio::spawn({
                 let client = self.client.clone();
-                async move { client.lock().await.get_transaction(tx_hash).await }
+                async move { client.lock().await.get_transaction(tx_hash.clone()).await }
             })
         });
 
         for result in futures::future::join_all(future_transactions).await {
             match result {
                 Ok(Ok((tx, _events))) => {
-                    transactions.push(RawTx::from(&tx));
+                    transactions.push(tx);
                     events.extend(_events);
                 }
                 Ok(Err(err)) => {
-                    return Err(err);
+                    return Err(Error::CosmosClientError(err));
                 }
                 Err(e) => {
                     return Err(Error::Other(e.to_string()));
@@ -158,11 +158,11 @@ impl Fetcher {
 
                 let mut _tx = tx.clone();
                 _tx.messages.extend(messages);
-                Ok::<RawTx, Error>(_tx)
+                Ok::<response::Transaction, Error>(_tx)
             })
         });
 
-        let mut transactions: Vec<RawTx> = vec![];
+        let mut transactions: Vec<response::Transaction> = vec![];
         for result in futures::future::join_all(tx_with_messages).await {
             match result {
                 Err(e) => {
@@ -178,7 +178,7 @@ impl Fetcher {
         }
 
         Ok(MsgCommittedBlock {
-            block: RawBlock::from(block),
+            block: block,
             txs: transactions,
             events,
         })

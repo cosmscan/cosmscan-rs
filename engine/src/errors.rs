@@ -8,23 +8,14 @@ pub enum Error {
     #[error("one of action for fetching transaction failed")]
     FetchingTransactionFailed,
 
+    #[error("cosmos client error occurred")]
+    CosmosClientError(#[from] cosmos_client::errors::Error),
+
     #[error("database model error")]
     DBError(#[from] cosmscan_models::errors::Error),
 
-    #[error("failed to conenct with tendermint rpc client")]
-    RPCError(tendermint_rpc::Error),
-
-    #[error("failed to connect to the cosmos grpc server")]
-    GRPCError(#[from] tonic::transport::Error),
-
-    #[error("tonic status failed")]
-    TonicStatusError(#[from] tonic::Status),
-
     #[error("serde json error")]
     InvalidJSONError(#[from] serde_json::Error),
-
-    #[error("failed to call the rest api with reqwest")]
-    RestAPIERror(#[from] reqwest::Error),
 
     #[error("unknown server error")]
     UnknownServerError(tendermint_rpc::Error),
@@ -40,13 +31,4 @@ pub enum Error {
 
     #[error("unknown error ${0}")]
     Other(String),
-}
-
-impl From<tendermint_rpc::Error> for Error {
-    fn from(err: tendermint_rpc::Error) -> Self {
-        match err.clone() {
-            tendermint_rpc::Error(ErrorDetail::Response(_), _) => Error::RPCError(err),
-            _ => Error::UnknownServerError(err),
-        }
-    }
 }

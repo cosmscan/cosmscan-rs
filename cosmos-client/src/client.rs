@@ -90,7 +90,7 @@ impl Client {
     pub async fn get_transaction(
         &mut self,
         hash: String,
-    ) -> Result<(response::Transaction, Vec<Event>), Error> {
+    ) -> Result<(response::Transaction, Vec<response::Event>), Error> {
         let request = cosmos_sdk_proto::cosmos::tx::v1beta1::GetTxRequest { hash };
 
         let response = self
@@ -108,6 +108,7 @@ impl Client {
                     let raw_event = response::Event {
                         tx_type: EventType::Transaction,
                         tx_hash: Some(tx_resp.txhash.clone()),
+                        block_height: tx_resp.height,
                         event_type: evt.r#type.clone(),
                         event_key: from_utf8(&attr.key)?.to_string(),
                         event_value: from_utf8(&attr.value)?.to_string(),

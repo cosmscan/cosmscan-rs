@@ -90,7 +90,8 @@ CREATE TABLE IF NOT EXISTS account_balance (
 CREATE TABLE IF NOT EXISTS messages (
     id SERIAL PRIMARY KEY,
     transaction_id INT NOT NULL,
-    rawdata JSONB,
+    seq INT NOT NULL,
+    rawdata JSONB NOT NULL,
     inserted_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP,
     CONSTRAINT fk_transaction_id FOREIGN KEY (transaction_id) REFERENCES transactions(id)

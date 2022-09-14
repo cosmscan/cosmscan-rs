@@ -5,9 +5,9 @@ use crate::{
         block::NewBlock,
         chain::{Chain, NewChain},
         event::NewEvent,
-        transaction::NewTransaction,
+        transaction::NewTransaction, message::NewMessage,
     },
-    schema::{blocks, chains, events, transactions},
+    schema::{blocks, chains, events, transactions, messages},
 };
 
 use crate::schema::chains::dsl::chains as all_chains;
@@ -52,6 +52,9 @@ pub trait StorageWriter {
 
     // transaction operations
     fn insert_transaction(&self, transaction: &NewTransaction) -> Result<usize, Error>;
+
+    // message operations
+    fn insert_message(&self, message: &NewMessage) -> Result<usize, Error>;
 }
 
 /// PersistenceStorage should implements both [`StorageWriter`] and [`StorageReader`]
@@ -130,6 +133,14 @@ impl StorageWriter for PersistenceStorage<BackendDB> {
         let conn = self.get_conn()?;
         diesel::insert_into(transactions::table)
             .values(transaction)
+            .execute(&conn)
+            .map_err(|e| e.into())
+    }
+
+    fn insert_message(&self, message: &NewMessage) -> Result<usize, Error> {
+        let conn = self.get_conn()?;
+        diesel::insert_into(messages::table)
+            .values(message)
             .execute(&conn)
             .map_err(|e| e.into())
     }

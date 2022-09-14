@@ -30,7 +30,7 @@ pub struct NewEvent {
     pub chain_id: i32,
     pub tx_type: i16,
     pub tx_hash: Option<String>,
-    pub block_height: u64,
+    pub block_height: i64,
     pub event_type: String,
     pub event_key: String,
     pub event_value: String,

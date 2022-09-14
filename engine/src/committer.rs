@@ -1,13 +1,14 @@
 use std::{collections::HashMap, sync::Arc};
 
+use cosmos_client::response::EventType;
 use cosmscan_models::{
     config::DBConfig,
     db::BackendDB,
     models::{
         block::NewBlock,
         chain::{Chain, NewChain},
-        event::NewEvent,
-        transaction::NewTransaction,
+        event::{NewEvent, TX_TYPE_BEGIN_BLOCK, TX_TYPE_END_BLOCK, TX_TYPE_TRANSACTION},
+        transaction::NewTransaction, message::NewMessage,
     },
     storage::{PersistenceStorage, StorageReader, StorageWriter},
 };
@@ -17,13 +18,13 @@ use tokio::{
     task::JoinHandle,
 };
 
-use crate::{config::ChainConfig, current_time, errors::Error, messages::MsgCommittedBlock};
+use crate::{current_time, errors::Error, messages::MsgCommittedBlock};
 
 pub struct Committer {
     storage: PersistenceStorage<BackendDB>,
-    chain_config: ChainConfig,
-    checkpoint_block: u64,
-    committed_blocks: Arc<Mutex<HashMap<u64, MsgCommittedBlock>>>,
+    chain_info: Chain,
+    checkpoint_block: i64,
+    committed_blocks: Arc<Mutex<HashMap<i64, MsgCommittedBlock>>>,
     subscribe_rx: mpsc::UnboundedReceiver<MsgCommittedBlock>,
     receive_loop: JoinHandle<()>,
 }
@@ -32,19 +33,19 @@ impl Committer {
     /// Creates a new committer instance
     pub fn new(
         dbconfig: DBConfig,
-        chain_config: ChainConfig,
+        chain_info: Chain,
         committed_block_c: mpsc::Receiver<MsgCommittedBlock>,
-        checkpoint_block: u64,
+        checkpoint_block: i64,
     ) -> Committer {
         let backend_db = BackendDB::new(dbconfig);
         let storage = PersistenceStorage::new(backend_db);
-        let committed_blocks: Arc<Mutex<HashMap<u64, MsgCommittedBlock>>> =
+        let committed_blocks: Arc<Mutex<HashMap<i64, MsgCommittedBlock>>> =
             Arc::new(Mutex::new(HashMap::new()));
         let (subscribe_tx, subscribe_rx) = mpsc::unbounded_channel();
 
         Committer {
             storage,
-            chain_config,
+            chain_info,
             checkpoint_block,
             committed_blocks,
             subscribe_rx,
@@ -58,12 +59,10 @@ impl Committer {
     /// Run committing block loop
     /// It receives committed blocks through channel and commits them to storage.
     pub async fn start(&mut self) -> Result<(), Error> {
-        let chain = self.load_chain_or_store()?;
-
         while let Some(msg) = self.subscribe_rx.recv().await {
-            let given_height = msg.block.height as u64;
-            if given_height as u64 == self.checkpoint_block {
-                match self.commit_to_storage(&chain, msg) {
+            let given_height = msg.block.height;
+            if given_height == self.checkpoint_block {
+                match self.commit_to_storage(&self.chain_info, msg) {
                     Ok(_) => {
                         info!("committed new block at {}", given_height);
                         self.checkpoint_block += 1;
@@ -79,45 +78,6 @@ impl Committer {
         }
 
         Ok(())
-    }
-
-    // load chain info from storage
-    // if it doesn't exists we'll create a new chain in the storage.
-    pub fn load_chain_or_store(&self) -> Result<Chain, Error> {
-        match self
-            .storage
-            .find_by_chain_id(self.chain_config.chain_id.clone())
-        {
-            Ok(chain) => {
-                return Ok(chain);
-            }
-            Err(e) => {
-                // match with not found error
-                match e {
-                    cosmscan_models::errors::Error::NotFound => {
-                        // create a new chain info
-                        let new_chain_id = self.storage.insert_chain(&NewChain {
-                            chain_id: self.chain_config.chain_id.clone(),
-                            chain_name: self.chain_config.chain_name.clone(),
-                            inserted_at: current_time(),
-                        })?;
-                        return Ok(Chain {
-                            id: new_chain_id as i32,
-                            chain_id: self.chain_config.chain_id.clone(),
-                            chain_name: self.chain_config.chain_name.clone(),
-                            icon_url: None,
-                            webisite: None,
-                            inserted_at: current_time(),
-                            updated_at: None,
-                        });
-                    }
-                    _ => {
-                        error!("unexpected error: {:?}", e);
-                        return Err(Error::DBError(e));
-                    }
-                }
-            }
-        };
     }
 
     pub fn commit_to_storage(&self, chain: &Chain, msg: MsgCommittedBlock) -> Result<bool, Error> {
@@ -147,7 +107,7 @@ impl Committer {
 
                 // insert transactions
                 for tx in txs {
-                    self.storage.insert_transaction(&NewTransaction {
+                    let tx_id = self.storage.insert_transaction(&NewTransaction {
                         chain_id: chain.id,
                         height: tx.height,
                         transaction_hash: tx.transaction_hash,
@@ -162,15 +122,30 @@ impl Committer {
                         tx_timestamp: tx.tx_timestamp,
                         inserted_at: current_time(),
                     })?;
+
+                    for (seq, msg) in tx.messages.iter().enumerate() {
+                        self.storage.insert_message(&NewMessage {
+                            transaction_id: tx_id as i32,
+                            seq: seq as i32,
+                            rawdata: serde_json::Value::from(msg.clone()),
+                            inserted_at: current_time(),
+                        })?;
+                    }
                 }
 
                 // insert events
                 for event in msg.events {
+                    let _type = match event.tx_type {
+                        EventType::BeginBlock => TX_TYPE_BEGIN_BLOCK,
+                        EventType::EndBlock => TX_TYPE_END_BLOCK,
+                        EventType::Transaction => TX_TYPE_TRANSACTION,
+                    };
+
                     self.storage.insert_event(&NewEvent {
                         chain_id: chain.id,
-                        tx_type: event.tx_type,
+                        tx_type: _type,
                         tx_hash: event.tx_hash,
-                        block_height: event.block_height as u64,
+                        block_height: event.block_height,
                         event_type: event.event_type,
                         event_key: event.event_key,
                         event_value: event.event_value,

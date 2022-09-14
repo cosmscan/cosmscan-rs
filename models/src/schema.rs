@@ -61,6 +61,7 @@ diesel::table! {
         chain_id -> Int4,
         tx_type -> Int2,
         tx_hash -> Nullable<Varchar>,
+        block_height -> Int8,
         event_type -> Varchar,
         event_key -> Varchar,
         event_value -> Varchar,
@@ -74,7 +75,8 @@ diesel::table! {
     messages (id) {
         id -> Int4,
         transaction_id -> Int4,
-        rawdata -> Nullable<Jsonb>,
+        seq -> Int4,
+        rawdata -> Jsonb,
         inserted_at -> Timestamp,
         updated_at -> Nullable<Timestamp>,
     }

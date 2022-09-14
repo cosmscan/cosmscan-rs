@@ -24,7 +24,7 @@ pub struct FetcherConfig {
     pub tendermint_rpc_endpoint: String,
     pub grpc_endpoint: String,
     pub rest_api_endpoint: String,
-    pub start_block: u32,
+    pub start_block: i64,
     pub try_resume_from_db: bool,
 }
 

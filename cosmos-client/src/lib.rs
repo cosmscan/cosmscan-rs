@@ -17,7 +17,7 @@ fn convert_block_events(
             evt.attributes.iter().map(|attr| Event {
                 tx_type: event_type.clone(),
                 tx_hash: None,
-                block_height: i64,
+                block_height: height,
                 event_type: evt.type_str.clone(),
                 event_key: attr.key.to_string(),
                 event_value: attr.value.to_string(),
