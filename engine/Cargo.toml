@@ -22,5 +22,6 @@ tokio = { version = "1", features = ["full"] }
 tendermint = "0.23.8"
 tendermint-rpc = { version = "0.23.8", features = ["http-client"]}
 cosmscan-models = { path = "../models", version = "0.1.0" }
+cosmos-client = { path = "../cosmos-client", version = "0.1.0" }
 cosmos-sdk-proto = "0.14.0"
 tonic = "0.8.0"

@@ -1,12 +1,10 @@
 use crate::bytes_to_tx_hash;
-use crate::client::{Client, ClientConfig};
 use crate::config::FetcherConfig;
 use crate::errors::Error;
 use crate::messages::{MsgCommittedBlock, RawBlock, RawEvent, RawTx};
 
-use cosmscan_models::models::event::{
-    TX_TYPE_BEGIN_BLOCK, TX_TYPE_END_BLOCK, TX_TYPE_TRANSACTION,
-};
+use cosmos_client::response;
+use cosmscan_models::models::event::{TX_TYPE_BEGIN_BLOCK, TX_TYPE_END_BLOCK, TX_TYPE_TRANSACTION};
 use log::{error, info};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
@@ -18,7 +16,7 @@ use tokio::sync::Mutex;
 
 /// Fetcher fetches blocks, transactions, and events from Tendermint RPC and Cosmos REST API
 pub struct Fetcher {
-    pub client: Arc<Mutex<Client>>,
+    pub client: Arc<Mutex<cosmos_client::client::Client>>,
     pub config: FetcherConfig,
     pub sender: tokio::sync::mpsc::Sender<MsgCommittedBlock>,
     pub start_block: u64,
@@ -31,7 +29,7 @@ impl Fetcher {
         sender: tokio::sync::mpsc::Sender<MsgCommittedBlock>,
         start_block: u64,
     ) -> Result<Self, Error> {
-        let client = Client::new(ClientConfig {
+        let client = cosmos_client::client::Client::new(cosmos_client::client::ClientConfig {
             tendermint_rpc_endpoint: config.tendermint_rpc_endpoint.clone(),
             grpc_endpoint: config.grpc_endpoint.clone(),
             rest_api_endpoint: config.rest_api_endpoint.clone(),
@@ -104,11 +102,11 @@ impl Fetcher {
 
     async fn committed_block_at(&self, block_height: u64) -> Result<MsgCommittedBlock, Error> {
         // get block info from given height
-        let block = self.client.lock().await.get_block(block_height).await?;
+        let (block, tx_hashes) = self.client.lock().await.get_block(block_height).await?;
         info!(
             "found new block | block_number:{}, hash: {}",
-            block.header.height,
-            block.header.hash(),
+            block.height,
+            block.block_hash.clone(),
         );
 
         // get block result from given height
@@ -120,40 +118,23 @@ impl Fetcher {
             .await?;
 
         // fetch trasnactions
-        let mut transactions: Vec<RawTx> = vec![];
-        let mut events: Vec<RawEvent> = vec![];
+        let mut transactions: Vec<response::Transaction> = vec![];
+        let mut events: Vec<response::Event> = vec![];
+        events.extend(block_result.begin_block_events);
+        events.extend(block_result.end_block_events);
 
-        let future_transactions = block
-            .data
-            .iter()
-            .map(bytes_to_tx_hash)
-            .map(|tx_hash| {
-                tokio::spawn({
-                    let client = self.client.clone();
-                    async move { client.lock().await.get_transaction(tx_hash).await }
-                })
-            });
+        let future_transactions = tx_hashes.iter().map(|tx_hash| {
+            tokio::spawn({
+                let client = self.client.clone();
+                async move { client.lock().await.get_transaction(tx_hash).await }
+            })
+        });
 
         for result in futures::future::join_all(future_transactions).await {
             match result {
-                Ok(Ok(tx)) => {
-                    if let Some(tx_resp) = &tx.tx_response {
-                        for evt in tx_resp.events.iter() {
-                            for attr in evt.attributes.iter() {
-                                let raw_event = RawEvent {
-                                    tx_type: TX_TYPE_TRANSACTION,
-                                    tx_hash: Some(tx_resp.txhash.clone()),
-                                    event_type: evt.r#type.clone(),
-                                    event_key: from_utf8(&attr.key)?.to_string(),
-                                    event_value: from_utf8(&attr.value)?.to_string(),
-                                    indexed: attr.index,
-                                };
-                                events.push(raw_event);
-                            }
-                        }
-                    }
-
+                Ok(Ok((tx, _events))) => {
                     transactions.push(RawTx::from(&tx));
+                    events.extend(_events);
                 }
                 Ok(Err(err)) => {
                     return Err(err);
@@ -167,12 +148,14 @@ impl Fetcher {
         // wrap transactions with messages
         let tx_with_messages = transactions.into_iter().map(|tx| {
             let client = self.client.clone();
+
             tokio::spawn(async move {
                 let messages = client
                     .lock()
                     .await
                     .get_tx_messages(tx.transaction_hash.clone())
                     .await?;
+
                 let mut _tx = tx.clone();
                 _tx.messages.extend(messages);
                 Ok::<RawTx, Error>(_tx)
@@ -194,38 +177,10 @@ impl Fetcher {
             }
         }
 
-        // expand block result to get begin block & end block events
-        if let Some(begin_block_events) = block_result.begin_block_events {
-            let begin_blocks = Self::convert_block_events(begin_block_events, TX_TYPE_BEGIN_BLOCK);
-            events.extend(begin_blocks);
-        }
-
-        if let Some(end_block_events) = block_result.end_block_events {
-            let end_blocks = Self::convert_block_events(end_block_events, TX_TYPE_END_BLOCK);
-            events.extend(end_blocks);
-        }
-
         Ok(MsgCommittedBlock {
             block: RawBlock::from(block),
             txs: transactions,
             events,
         })
-    }
-
-    fn convert_block_events(events: Vec<abci::Event>, tx_type: i16) -> Vec<RawEvent> {
-        events
-            .iter()
-            .map(|evt| {
-                evt.attributes.iter().map(|attr| RawEvent {
-                    tx_type: tx_type,
-                    tx_hash: None,
-                    event_type: evt.type_str.clone(),
-                    event_key: attr.key.to_string(),
-                    event_value: attr.value.to_string(),
-                    indexed: false,
-                })
-            })
-            .flatten()
-            .collect::<Vec<RawEvent>>()
     }
 }

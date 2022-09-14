@@ -1,8 +1,9 @@
 use std::{env::args, sync::Arc};
 
 use cosmscan_engine::{
+    bytes_to_tx_hash,
     client::{Client, ClientConfig},
-    errors::Error, bytes_to_tx_hash,
+    errors::Error,
 };
 
 use futures::future;
@@ -34,7 +35,7 @@ async fn main() -> Result<(), Error> {
         .await
         .get_block_result(block_height)
         .await?;
-        
+
     let txes = block.data.iter().map(|d| bytes_to_tx_hash(d)).map(|hash| {
         let client = client.clone();
         async move { client.lock().await.get_transaction(hash).await }

@@ -3,4 +3,5 @@ members = [
     "runtime",
     "models",
     "engine",
+    "cosmos-client",
 ]

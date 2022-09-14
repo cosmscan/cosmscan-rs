@@ -239,6 +239,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5827cebf4670468b8772dd191856768aedcb1b0278a04f989f7766351917b9dc"
 
 [[package]]
+name = "cosmos-client"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "cosmos-sdk-proto",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2 0.10.2",
+ "tendermint",
+ "tendermint-rpc",
+ "thiserror",
+ "tonic",
+]
+
+[[package]]
 name = "cosmos-sdk-proto"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -257,6 +273,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "clap",
+ "cosmos-client",
  "cosmos-sdk-proto",
  "cosmscan-models",
  "env_logger",

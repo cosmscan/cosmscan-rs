@@ -17,7 +17,6 @@ use tokio::{
     task::JoinHandle,
 };
 
-
 use crate::{config::ChainConfig, current_time, errors::Error, messages::MsgCommittedBlock};
 
 pub struct Committer {
@@ -171,6 +170,7 @@ impl Committer {
                         chain_id: chain.id,
                         tx_type: event.tx_type,
                         tx_hash: event.tx_hash,
+                        block_height: event.block_height as u64,
                         event_type: event.event_type,
                         event_key: event.event_key,
                         event_value: event.event_value,

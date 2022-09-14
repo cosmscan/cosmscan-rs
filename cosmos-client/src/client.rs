@@ -1,15 +1,20 @@
-use cosmos_sdk_proto::cosmos::tx::v1beta1::{service_client, GetTxResponse};
-use tendermint::block;
-use tendermint_rpc::{endpoint::block_results, Client as tm_client};
+use std::str::from_utf8;
 
-use crate::errors::Error;
+use cosmos_sdk_proto::cosmos::tx::v1beta1::service_client;
+use tendermint::block;
+use tendermint_rpc::Client as tm_client;
+
+use crate::{
+    bytes_to_tx_hash, convert_block_events,
+    errors::Error,
+    response::{self, EventType, TransactionResp},
+};
 
 pub struct ClientConfig {
     pub tendermint_rpc_endpoint: String,
     pub grpc_endpoint: String,
     pub rest_api_endpoint: String,
 }
-
 pub struct Client {
     tm_client: tendermint_rpc::HttpClient,
     grpc_client: service_client::ServiceClient<tonic::transport::Channel>,
@@ -35,29 +40,57 @@ impl Client {
     }
 
     /// Returns a block info by height.
-    pub async fn get_block(&self, height: u64) -> Result<tendermint::block::Block, Error> {
+    pub async fn get_block(&self, height: i64) -> Result<(response::Block, Vec<String>), Error> {
         let block = self
             .tm_client
             .block(block::Height::from(height as u32))
             .await
             .map_err(|e| Error::from(e))?;
 
-        Ok(block.block)
+        let tx_hashes = block
+            .block
+            .data
+            .iter()
+            .map(bytes_to_tx_hash)
+            .collect::<Vec<_>>();
+
+        let resp = response::Block::from(block.block);
+
+        Ok((resp, tx_hashes))
     }
 
     /// Returns a block result by height.
-    pub async fn get_block_result(&self, height: u64) -> Result<block_results::Response, Error> {
+    pub async fn get_block_result(&self, height: i64) -> Result<response::BlockResult, Error> {
         let block_result = self
             .tm_client
             .block_results(block::Height::from(height as u32))
             .await
             .map_err(|e| Error::from(e))?;
 
-        Ok(block_result)
+        let mut resp = response::BlockResult {
+            height,
+            begin_block_events: vec![],
+            end_block_events: vec![],
+        };
+
+        if let Some(events) = block_result.begin_block_events {
+            let converted = convert_block_events(events, height, EventType::BeginBlock);
+            resp.begin_block_events = converted;
+        }
+
+        if let Some(events) = block_result.end_block_events {
+            let converted = convert_block_events(events, height, EventType::EndBlock);
+            resp.end_block_events = converted;
+        }
+
+        Ok(resp)
     }
 
     /// Returns a transaction by hash.
-    pub async fn get_transaction(&mut self, hash: String) -> Result<GetTxResponse, Error> {
+    pub async fn get_transaction(
+        &mut self,
+        hash: String,
+    ) -> Result<(response::Transaction, Vec<Event>), Error> {
         let request = cosmos_sdk_proto::cosmos::tx::v1beta1::GetTxRequest { hash };
 
         let response = self
@@ -66,7 +99,26 @@ impl Client {
             .await
             .map_err(|e| Error::from(e))?;
 
-        Ok(response.get_ref().clone())
+        let resp = response::Transaction::from(&response.get_ref().clone());
+
+        let mut events: Vec<response::Event> = vec![];
+        if let Some(tx_resp) = &response.into_inner().tx_response {
+            for evt in tx_resp.events.iter() {
+                for attr in evt.attributes.iter() {
+                    let raw_event = response::Event {
+                        tx_type: EventType::Transaction,
+                        tx_hash: Some(tx_resp.txhash.clone()),
+                        event_type: evt.r#type.clone(),
+                        event_key: from_utf8(&attr.key)?.to_string(),
+                        event_value: from_utf8(&attr.value)?.to_string(),
+                        indexed: attr.index,
+                    };
+                    events.push(raw_event);
+                }
+            }
+        }
+
+        Ok((resp, events))
     }
 
     /// Returns a transaction messages by tx hash

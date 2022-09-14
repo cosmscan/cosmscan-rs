@@ -1,8 +1,7 @@
 use chrono::{NaiveDateTime, Utc};
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 
 pub mod app;
-pub mod client;
 pub mod committer;
 pub mod config;
 pub mod errors;
