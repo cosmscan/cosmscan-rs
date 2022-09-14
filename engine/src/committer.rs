@@ -6,7 +6,7 @@ use cosmscan_models::{
     db::BackendDB,
     models::{
         block::NewBlock,
-        chain::{Chain},
+        chain::Chain,
         event::{NewEvent, TX_TYPE_BEGIN_BLOCK, TX_TYPE_END_BLOCK, TX_TYPE_TRANSACTION},
         message::NewMessage,
         transaction::NewTransaction,
@@ -59,7 +59,7 @@ impl Committer {
 
     /// Run committing block loop
     /// It receives committed blocks through channel and commits them to storage.
-    pub async fn start(&mut self) -> Result<(), Error> {
+    pub async fn run(&mut self) -> Result<(), Error> {
         while let Some(msg) = self.subscribe_rx.recv().await {
             let given_height = msg.block.height;
             if given_height == self.checkpoint_block {

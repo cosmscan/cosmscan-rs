@@ -1,4 +1,3 @@
-
 use crate::config::FetcherConfig;
 use crate::errors::Error;
 use crate::messages::MsgCommittedBlock;
@@ -45,7 +44,7 @@ impl Fetcher {
         })
     }
 
-    pub async fn run_fetch_loop(&self) -> Result<(), Error> {
+    pub async fn run(&self) -> Result<(), Error> {
         // start_block must be greater than zero int.
         if self.start_block <= 0 {
             return Err(Error::StartBlockMustBeGreaterThanZero);

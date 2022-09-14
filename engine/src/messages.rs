@@ -1,6 +1,4 @@
-
 use cosmos_client::response;
-
 
 /// MsgCommittedBlock is a message which indicates committed block.
 /// It's intended to be sent to the sender channel of [`Fetcher`].

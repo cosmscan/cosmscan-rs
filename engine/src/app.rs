@@ -29,22 +29,28 @@ impl App<PersistenceStorage<BackendDB>> {
     }
 
     pub async fn start(&self) -> Result<(), Error> {
-        let (tx, rv) = mpsc::channel::<MsgCommittedBlock>(100);
+        let (sender_committed_block, receiver_committed_block) =
+            mpsc::channel::<MsgCommittedBlock>(100);
+
+        // get chain info from database, if it doesn't exists, create a new one.
         let chain = self.load_chain_or_store()?;
         let start_block = match self.load_latest_block_height(&chain) {
             Some(height) => height + 1,
             None => self.config.fetcher.start_block,
         };
 
-        let fetcher = Fetcher::new(self.config.fetcher.clone(), tx, start_block).await?;
-
-        let mut committer = Committer::new(self.config.db.clone(), chain, rv, start_block);
+        // create a fetcher and run it
+        let fetcher_config = self.config.fetcher.clone();
+        let fetcher = Fetcher::new(fetcher_config, sender_committed_block, start_block).await?;
 
         tokio::spawn(async move {
-            fetcher.run_fetch_loop().await.unwrap();
+            fetcher.run().await.unwrap();
         });
 
-        committer.start().await?;
+        // create a committer and run it
+        let db_config = self.config.db.clone();
+        let mut committer = Committer::new(db_config, chain, receiver_committed_block, start_block);
+        committer.run().await?;
 
         Ok(())
     }
