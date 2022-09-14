@@ -1,6 +1,6 @@
-use serde::{Serialize, Deserialize};
 use diesel::Insertable;
 use diesel::Queryable;
+use serde::{Deserialize, Serialize};
 
 use crate::schema::messages;
 

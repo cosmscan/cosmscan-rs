@@ -5,9 +5,10 @@ use crate::{
         block::NewBlock,
         chain::{Chain, NewChain},
         event::NewEvent,
-        transaction::NewTransaction, message::NewMessage,
+        message::NewMessage,
+        transaction::NewTransaction,
     },
-    schema::{blocks, chains, events, transactions, messages},
+    schema::{blocks, chains, events, messages, transactions},
 };
 
 use crate::schema::chains::dsl::chains as all_chains;

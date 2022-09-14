@@ -36,20 +36,9 @@ impl App<PersistenceStorage<BackendDB>> {
             None => self.config.fetcher.start_block,
         };
 
+        let fetcher = Fetcher::new(self.config.fetcher.clone(), tx, start_block).await?;
 
-        let fetcher = Fetcher::new(
-            self.config.fetcher.clone(),
-            tx,
-            start_block,
-        )
-        .await?;
-
-        let mut committer = Committer::new(
-            self.config.db.clone(),
-            chain,
-            rv,
-            start_block,
-        );
+        let mut committer = Committer::new(self.config.db.clone(), chain, rv, start_block);
 
         tokio::spawn(async move {
             fetcher.run_fetch_loop().await.unwrap();

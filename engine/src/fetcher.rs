@@ -1,7 +1,7 @@
 use crate::bytes_to_tx_hash;
 use crate::config::FetcherConfig;
 use crate::errors::Error;
-use crate::messages::{MsgCommittedBlock};
+use crate::messages::MsgCommittedBlock;
 
 use cosmos_client::response;
 use cosmscan_models::models::event::{TX_TYPE_BEGIN_BLOCK, TX_TYPE_END_BLOCK, TX_TYPE_TRANSACTION};
