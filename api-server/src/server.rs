@@ -1,51 +1,70 @@
 use std::sync::Arc;
 
-use hyper::{service::{make_service_fn, service_fn}, Server, Response, Body, Request};
+use cosmscan_models::{
+    db::{BackendDB, Database},
+    storage::PersistenceStorage,
+};
+use hyper::{
+    header,
+    service::{make_service_fn, service_fn},
+    Body, Request, Response, Server, StatusCode,
+};
 
-use crate::{GenericError, router::Router};
+use crate::{
+    handlers,
+    router::{self, Router},
+    AppState, Config, GenericError,
+};
 
 pub struct ApiServer {
-    
-}
-
-async fn route(req: Request<Body>, router: Arc<Router>) -> Result<Response<Body>, GenericError> {
-    let method = req.method().clone();
-    let path = req.uri().path().to_string();
-    let router = router.router_map.get(&method).unwrap();
-    let matched = router.recognize(&path).unwrap();
-    let handler = matched.handler();
-
-    handler.handle(req).await
+    pub config: Config,
 }
 
 impl ApiServer {
-    pub fn new() -> Self {
-        Self {
-        
-        }
+    pub fn new(config: Config) -> Self {
+        Self { config }
     }
 
-    pub async fn run(&mut self) -> Result<(), GenericError> {
+    /// run the server on the given address & port
+    pub async fn run(&self) -> Result<(), GenericError> {
+        // connect to the database
+        let mut db = BackendDB::new(self.config.db.clone());
+        db.connect();
+        let storage = PersistenceStorage::new(db);
+        let shared_storage = Arc::new(storage);
+
         // add routing
-        let mut router = Router::new();
-        router.get("/hello_world", |req| async move {
-            Ok(Response::new(Body::from("Hello World")))
-        });
+        let shared_router = Arc::new(self.router());
 
-        router.get("/index", |req| async move {
-            Ok(Response::new(Body::from("index")))
-        });
-
-        let shared_router = Arc::new(router);
-
-        let addr = "127.0.0.1:1337".parse().unwrap();
+        let addr_string = format!("{}:{}", self.config.server.host, self.config.server.port);
+        let addr = addr_string.parse().unwrap();
         let new_service = make_service_fn(move |_| {
             let router_capture = shared_router.clone();
+            let storage_capture = shared_storage.clone();
+
             async {
                 Ok::<_, GenericError>(service_fn(move |req| {
                     let router = router_capture.clone();
+                    let storage = storage_capture.clone();
+
                     async move {
-                        route(req, router.clone()).await
+                        let result: Result<Response<Body>, GenericError> = match router::route(
+                            req,
+                            router.clone(),
+                            AppState::new(storage.clone()),
+                        )
+                        .await
+                        {
+                            Ok(res) => Ok(res),
+                            Err(_) => {
+                                let response = Response::builder()
+                                    .status(StatusCode::INTERNAL_SERVER_ERROR)
+                                    .header(header::CONTENT_TYPE, "application/json")
+                                    .body(Body::from("{ \"error\": \"Internal Server Error\" }"))?;
+                                Ok(response)
+                            }
+                        };
+                        result
                     }
                 }))
             }
@@ -55,5 +74,13 @@ impl ApiServer {
         server.await?;
 
         Ok(())
+    }
+
+    pub fn router(&self) -> Router {
+        let mut router = Router::new();
+
+        router.get("/hello_world", handlers::handle_hello_world);
+
+        router
     }
 }
