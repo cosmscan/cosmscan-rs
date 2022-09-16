@@ -62,6 +62,7 @@ diesel::table! {
         tx_type -> Int2,
         tx_hash -> Nullable<Varchar>,
         block_height -> Int8,
+        event_seq -> Int4,
         event_type -> Varchar,
         event_key -> Varchar,
         event_value -> Varchar,

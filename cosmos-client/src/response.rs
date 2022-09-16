@@ -22,6 +22,7 @@ pub struct Event {
     pub tx_type: EventType,
     pub tx_hash: Option<String>,
     pub block_height: i64,
+    pub event_seq: i32,
     pub event_type: String,
     pub event_key: String,
     pub event_value: String,

@@ -147,6 +147,7 @@ impl Committer {
                         tx_type: _type,
                         tx_hash: event.tx_hash,
                         block_height: event.block_height,
+                        event_seq: event.event_seq,
                         event_type: event.event_type,
                         event_key: event.event_key,
                         event_value: event.event_value,

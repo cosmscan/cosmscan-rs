@@ -103,12 +103,13 @@ impl Client {
 
         let mut events: Vec<response::Event> = vec![];
         if let Some(tx_resp) = &response.into_inner().tx_response {
-            for evt in tx_resp.events.iter() {
+            for (seq, evt) in tx_resp.events.iter().enumerate() {
                 for attr in evt.attributes.iter() {
                     let raw_event = response::Event {
                         tx_type: EventType::Transaction,
                         tx_hash: Some(tx_resp.txhash.clone()),
                         block_height: tx_resp.height,
+                        event_seq: seq as i32,
                         event_type: evt.r#type.clone(),
                         event_key: from_utf8(&attr.key)?.to_string(),
                         event_value: from_utf8(&attr.value)?.to_string(),
