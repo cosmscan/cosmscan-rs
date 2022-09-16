@@ -3,17 +3,7 @@ use hyper::{header, Body, Request, Response, StatusCode};
 
 use crate::{resputil, AppState, GenericError};
 
-pub async fn handle_hello_world(
-    req: Request<Body>,
-    state: AppState,
-) -> Result<Response<Body>, GenericError> {
-    let response = Response::builder()
-        .status(StatusCode::OK)
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from("{ \"message\": \"Hello World\" }"))?;
-    Ok(response)
-}
-
+/// Returns a block by height.
 pub async fn get_block(
     req: Request<Body>,
     state: AppState,
@@ -27,6 +17,18 @@ pub async fn get_block(
 
     let storage = state.storage;
     let block = storage.find_block_by_height(block_height)?;
+    let json = serde_json::to_string(&block)?;
+
+    resputil::ok_json(json)
+}
+
+/// Returns a latestblock
+pub async fn latest_block(
+    req: Request<Body>,
+    state: AppState,
+) -> Result<Response<Body>, GenericError> {
+    let storage = state.storage;
+    let block = storage.find_latest_block()?;
     let json = serde_json::to_string(&block)?;
 
     resputil::ok_json(json)

@@ -5,7 +5,7 @@ use crate::{
         block::NewBlock,
         chain::{Chain, NewChain},
         event::NewEvent,
-        message::NewMessage,
+        message::{Message, NewMessage},
         transaction::NewTransaction,
     },
     schema::{blocks, chains, events, messages, transactions},
@@ -13,6 +13,9 @@ use crate::{
 
 use crate::schema::blocks::dsl::blocks as all_blocks;
 use crate::schema::chains::dsl::chains as all_chains;
+use crate::schema::events::dsl::events as all_events;
+use crate::schema::messages::dsl::messages as all_messages;
+use crate::schema::transactions::dsl::transactions as all_transactions;
 
 use crate::models::block::Block;
 use crate::models::event::Event;
@@ -24,22 +27,28 @@ type Connection = PooledConnection<ConnectionManager<PgConnection>>;
 
 /// StorageReader defines a set of methods for reading the database
 pub trait StorageReader {
-    // simple count function
-    fn count_blocks(&self) -> Result<i64, Error>;
-    fn count_chains(&self) -> Result<i64, Error>;
-    fn count_events(&self) -> Result<i64, Error>;
-    fn count_transactions(&self) -> Result<i64, Error>;
-
+    // block operations
     fn find_block_by_height(&self, height: i64) -> Result<Block, Error>;
+    fn list_blocks(&self, chain_id: i32, limit: i64, offset: i64) -> Result<Vec<Block>, Error>;
+    fn find_latest_block(&self) -> Result<Block, Error>;
 
+    // chain operations
     fn find_by_chain_id(&self, chain_id: String) -> Result<Chain, Error>;
     fn all_chains(&self) -> Result<Vec<Chain>, Error>;
-    fn list_blocks(&self, chain_id: i32, limit: i64, offset: i64) -> Result<Vec<Block>, Error>;
+
+    // trasnaction operations
     fn list_transactions(
         &self,
         chain_id: i32,
         block_number: i64,
-    ) -> Result<Vec<(Transaction, Vec<Event>)>, Error>;
+    ) -> Result<Vec<Transaction>, Error>;
+    fn find_transaction_by_hash(&self, tx_hash: String) -> Result<Transaction, Error>;
+
+    // message operations
+    fn list_messages_by_tx(&self, tx_id: i32) -> Result<Vec<Message>, Error>;
+
+    // event operations
+    fn list_events_by_tx(&self, tx_hash: String) -> Result<Vec<Event>, Error>;
 }
 
 /// StorageWriter defines a set of method for writing/updating the database.
@@ -151,20 +160,24 @@ impl StorageWriter for PersistenceStorage<BackendDB> {
 }
 
 impl StorageReader for PersistenceStorage<BackendDB> {
-    fn count_blocks(&self) -> Result<i64, Error> {
+    fn find_block_by_height(&self, height: i64) -> Result<Block, Error> {
+        let conn = self.get_conn()?;
+        all_blocks
+            .filter(blocks::height.eq(height))
+            .first(&conn)
+            .map_err(|e| e.into())
+    }
+
+    fn list_blocks(&self, _chain_id: i32, _limit: i64, _offset: i64) -> Result<Vec<Block>, Error> {
         todo!()
     }
 
-    fn count_chains(&self) -> Result<i64, Error> {
-        todo!()
-    }
-
-    fn count_events(&self) -> Result<i64, Error> {
-        todo!()
-    }
-
-    fn count_transactions(&self) -> Result<i64, Error> {
-        todo!()
+    fn find_latest_block(&self) -> Result<Block, Error> {
+        let conn = self.get_conn()?;
+        all_blocks
+            .order(blocks::height.desc())
+            .first(&conn)
+            .map_err(|e| e.into())
     }
 
     fn find_by_chain_id(&self, chain_id: String) -> Result<Chain, Error> {
@@ -176,26 +189,42 @@ impl StorageReader for PersistenceStorage<BackendDB> {
     }
 
     fn all_chains(&self) -> Result<Vec<Chain>, Error> {
-        todo!()
-    }
-
-    fn list_blocks(&self, _chain_id: i32, _limit: i64, _offset: i64) -> Result<Vec<Block>, Error> {
-        todo!()
-    }
-
-    fn list_transactions(
-        &self,
-        _chain_id: i32,
-        _block_number: i64,
-    ) -> Result<Vec<(Transaction, Vec<Event>)>, Error> {
-        todo!()
-    }
-
-    fn find_block_by_height(&self, height: i64) -> Result<Block, Error> {
         let conn = self.get_conn()?;
-        all_blocks
-            .filter(blocks::height.eq(height))
+        all_chains.load::<Chain>(&conn).map_err(|e| e.into())
+    }
+
+    fn list_transactions(&self, chain_id: i32, height: i64) -> Result<Vec<Transaction>, Error> {
+        let conn = self.get_conn()?;
+        let condition = transactions::height
+            .eq(height)
+            .and(transactions::chain_id.eq(chain_id));
+        all_transactions
+            .filter(condition)
+            .load::<Transaction>(&conn)
+            .map_err(|e| e.into())
+    }
+
+    fn find_transaction_by_hash(&self, tx_hash: String) -> Result<Transaction, Error> {
+        let conn = self.get_conn()?;
+        all_transactions
+            .filter(transactions::transaction_hash.eq(tx_hash))
             .first(&conn)
+            .map_err(|e| e.into())
+    }
+
+    fn list_messages_by_tx(&self, tx_id: i32) -> Result<Vec<Message>, Error> {
+        let conn = self.get_conn()?;
+        all_messages
+            .filter(messages::transaction_id.eq(tx_id))
+            .load::<Message>(&conn)
+            .map_err(|e| e.into())
+    }
+
+    fn list_events_by_tx(&self, tx_hash: String) -> Result<Vec<Event>, Error> {
+        let conn = self.get_conn()?;
+        all_events
+            .filter(events::tx_hash.eq(tx_hash))
+            .load::<Event>(&conn)
             .map_err(|e| e.into())
     }
 }

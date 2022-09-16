@@ -78,7 +78,6 @@ impl ApiServer {
     pub fn router(&self) -> Router {
         let mut router = Router::new();
 
-        router.get("/hello_world", handlers::handle_hello_world);
         router.get("/api/block/:block_height", handlers::get_block);
 
         router

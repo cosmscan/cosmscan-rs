@@ -8,7 +8,7 @@ use crate::schema::messages;
 pub struct Message {
     pub id: i32,
     pub transaction_id: i32,
-    pub seq: i64,
+    pub seq: i32,
     pub rawdata: serde_json::Value,
     pub inserted_at: chrono::NaiveDateTime,
     pub updated_at: Option<chrono::NaiveDateTime>,
