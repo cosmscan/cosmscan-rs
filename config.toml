@@ -2,6 +2,10 @@
 # enable fetch account & balance and commit to the database.
 fetcher_account_enabled = true
 
+[server]
+host = "127.0.0.1"
+port = 1337
+
 [chain]
 chain_id = "gaia"
 chain_name = "cosmos"

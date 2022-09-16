@@ -1,10 +1,12 @@
 use std::{fs, sync::Arc};
 
 use cosmscan_models::{config::DBConfig, db::BackendDB, storage::PersistenceStorage};
+use route_recognizer::Params;
 use serde::Deserialize;
 
 mod errors;
 mod handlers;
+mod resputil;
 mod router;
 pub mod server;
 
@@ -12,6 +14,7 @@ type GenericError = Box<dyn std::error::Error + Send + Sync + 'static>;
 
 pub struct AppState {
     pub storage: Arc<PersistenceStorage<BackendDB>>,
+    pub params: Params,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -27,8 +30,8 @@ pub struct ServerConfig {
 }
 
 impl AppState {
-    fn new(storage: Arc<PersistenceStorage<BackendDB>>) -> Self {
-        Self { storage }
+    fn new(storage: Arc<PersistenceStorage<BackendDB>>, params: Params) -> Self {
+        Self { storage, params }
     }
 }
 

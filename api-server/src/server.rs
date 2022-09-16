@@ -9,6 +9,7 @@ use hyper::{
     service::{make_service_fn, service_fn},
     Body, Request, Response, Server, StatusCode,
 };
+use log::info;
 
 use crate::{
     handlers,
@@ -48,22 +49,19 @@ impl ApiServer {
                     let storage = storage_capture.clone();
 
                     async move {
-                        let result: Result<Response<Body>, GenericError> = match router::route(
-                            req,
-                            router.clone(),
-                            AppState::new(storage.clone()),
-                        )
-                        .await
-                        {
-                            Ok(res) => Ok(res),
-                            Err(_) => {
-                                let response = Response::builder()
-                                    .status(StatusCode::INTERNAL_SERVER_ERROR)
-                                    .header(header::CONTENT_TYPE, "application/json")
-                                    .body(Body::from("{ \"error\": \"Internal Server Error\" }"))?;
-                                Ok(response)
-                            }
-                        };
+                        let result: Result<Response<Body>, GenericError> =
+                            match router::route(req, router.clone(), storage.clone()).await {
+                                Ok(res) => Ok(res),
+                                Err(_) => {
+                                    let response = Response::builder()
+                                        .status(StatusCode::INTERNAL_SERVER_ERROR)
+                                        .header(header::CONTENT_TYPE, "application/json")
+                                        .body(Body::from(
+                                            "{ \"error\": \"Internal Server Error\" }",
+                                        ))?;
+                                    Ok(response)
+                                }
+                            };
                         result
                     }
                 }))
@@ -71,6 +69,7 @@ impl ApiServer {
         });
 
         let server = Server::bind(&addr).serve(new_service);
+        info!("Server listening on http://{}", addr);
         server.await?;
 
         Ok(())
@@ -80,6 +79,7 @@ impl ApiServer {
         let mut router = Router::new();
 
         router.get("/hello_world", handlers::handle_hello_world);
+        router.get("/api/block/:block_height", handlers::get_block);
 
         router
     }

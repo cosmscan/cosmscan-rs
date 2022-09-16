@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
+use cosmscan_models::{db::BackendDB, storage::PersistenceStorage};
 use futures::Future;
 use hyper::{header, Body, Method, Request, Response, StatusCode};
 
@@ -76,7 +77,7 @@ impl Router {
 pub async fn route(
     req: Request<Body>,
     router: Arc<Router>,
-    app_state: AppState,
+    storage: Arc<PersistenceStorage<BackendDB>>,
 ) -> Result<Response<Body>, GenericError> {
     let method = req.method().clone();
     let path = req.uri().path().to_string();
@@ -90,7 +91,8 @@ pub async fn route(
     match router.recognize(&path) {
         Ok(match_info) => {
             let handler = match_info.handler();
-            handler.handle(req, app_state).await
+            let params = match_info.params().to_owned();
+            handler.handle(req, AppState::new(storage, params)).await
         }
         Err(_) => {
             let response = Response::builder()

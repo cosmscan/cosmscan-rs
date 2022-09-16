@@ -11,6 +11,7 @@ use crate::{
     schema::{blocks, chains, events, messages, transactions},
 };
 
+use crate::schema::blocks::dsl::blocks as all_blocks;
 use crate::schema::chains::dsl::chains as all_chains;
 
 use crate::models::block::Block;
@@ -28,6 +29,8 @@ pub trait StorageReader {
     fn count_chains(&self) -> Result<i64, Error>;
     fn count_events(&self) -> Result<i64, Error>;
     fn count_transactions(&self) -> Result<i64, Error>;
+
+    fn find_block_by_height(&self, height: i64) -> Result<Block, Error>;
 
     fn find_by_chain_id(&self, chain_id: String) -> Result<Chain, Error>;
     fn all_chains(&self) -> Result<Vec<Chain>, Error>;
@@ -186,5 +189,13 @@ impl StorageReader for PersistenceStorage<BackendDB> {
         _block_number: i64,
     ) -> Result<Vec<(Transaction, Vec<Event>)>, Error> {
         todo!()
+    }
+
+    fn find_block_by_height(&self, height: i64) -> Result<Block, Error> {
+        let conn = self.get_conn()?;
+        all_blocks
+            .filter(blocks::height.eq(height))
+            .first(&conn)
+            .map_err(|e| e.into())
     }
 }
