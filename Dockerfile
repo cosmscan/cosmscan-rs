@@ -1,12 +1,10 @@
-FROM rust:1.63-alpine3.15
+FROM rust:1.63-buster AS build-env
 
 WORKDIR /app
 COPY . .
 
-RUN apk update && apk add --no-cache libpq-dev
+RUN apt update && apt install -y libpq-dev build-essential
 
 RUN cargo install diesel_cli --no-default-features --features postgres
-
-RUN cargo install --path .
 
 RUN cargo build --release

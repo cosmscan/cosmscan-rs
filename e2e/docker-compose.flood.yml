@@ -1,4 +1,4 @@
-version: '3'
+version: '3.4'
 
 services:
   testchain:
@@ -38,8 +38,6 @@ services:
     image: postgres:latest
     container_name: postgres
     restart: always
-    ports:
-      - "5432:5432"
     environment:
       POSTGRES_USER: "cosmscan"
       POSTGRES_PASSWORD: "cosmscan"
@@ -48,6 +46,53 @@ services:
     restart: always
     ports:
       - "8082:8080"
+  migrator:
+    depends_on:
+      - postgres
+      - testchain
+    build:
+      context: ..
+    command:
+      - /bin/sh
+      - -c
+      - |
+        # wait for postgres to be ready
+        while ! nc -z postgres 5432; do sleep 1; done;
 
+        # run migrations
+        cd /app/models
+        diesel migration run
+  engine:
+    depends_on:
+      - migrator
+      - postgres
+      - testchain
+    build:
+      context: ..
+    command:
+      - /bin/sh
+      - -c
+      - |
+        # wait for postgres to be ready
+        while ! nc -z postgres 5432; do sleep 1; done;
+        while ! nc -z testchain 1317; do sleep 1; done;
+
+        RUST_LOG=info /app/release/engine --config-file /app/e2e/config.e2e.toml
+  server:
+    depends_on:
+      - migrator
+      - postgres
+      - testchain
+    build:
+      context: ..
+    command:
+      - /bin/sh
+      - -c
+      - |
+        # wait for postgres to be ready
+        while ! nc -z postgres 5432; do sleep 1; done;
+        while ! nc -z testchain 1317; do sleep 1; done;
+
+        RUST_LOG=info /app/release/server --config-file /app/e2e/config.e2e.toml
 volumes:
   chain-home:

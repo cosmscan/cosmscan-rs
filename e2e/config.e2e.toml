@@ -1,0 +1,25 @@
+[engine]
+fetcher_account_enabled = true
+
+[server]
+host = "127.0.0.1"
+port = 1337
+
+[chain]
+chain_id = "gaia"
+chain_name = "cosmos"
+website = "https://cosmos.network/"
+
+[fetcher]
+tendermint_rpc_endpoint = "http://testchain:26657"
+grpc_endpoint = "http://testchain:9090"
+rest_api_endpoint = "http://testchain:1317"
+start_block = 1
+try_resume_from_db = true
+
+[db]
+host = "database"
+port = 5432
+user = "cosmscan"
+password = "cosmscan"
+database = "cosmscan"

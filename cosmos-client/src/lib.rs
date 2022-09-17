@@ -13,15 +13,20 @@ fn convert_block_events(
 ) -> Vec<Event> {
     abci_events
         .iter()
-        .map(|evt| {
-            evt.attributes.iter().map(|attr| Event {
-                tx_type: event_type.clone(),
-                tx_hash: None,
-                block_height: height,
-                event_type: evt.type_str.clone(),
-                event_key: attr.key.to_string(),
-                event_value: attr.value.to_string(),
-                indexed: false,
+        .enumerate()
+        .map(|(seq, evt)| {
+            let event_type = event_type.clone();
+            evt.attributes.iter().map(move |attr| {
+                Event {
+                    tx_type: event_type.clone(),
+                    tx_hash: None,
+                    block_height: height,
+                    event_seq: seq as i32,
+                    event_type: evt.type_str.clone(),
+                    event_key: attr.key.to_string(),
+                    event_value: attr.value.to_string(),
+                    indexed: false,
+                }
             })
         })
         .flatten()
