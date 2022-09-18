@@ -61,6 +61,8 @@ services:
 
         # run migrations
         cd /app/models
+
+        echo "DATABASE_URL=postgres://cosmscan:cosmscan@postgres/cosmscan" > .env
         diesel migration run
   engine:
     depends_on:
@@ -69,6 +71,8 @@ services:
       - testchain
     build:
       context: ..
+    volumes:
+      - .:/etc/config
     command:
       - /bin/sh
       - -c
@@ -77,7 +81,7 @@ services:
         while ! nc -z postgres 5432; do sleep 1; done;
         while ! nc -z testchain 1317; do sleep 1; done;
 
-        RUST_LOG=info /app/release/engine --config-file /app/e2e/config.e2e.toml
+        RUST_LOG=info /app/target/release/engine --filename /etc/config/config.e2e.toml
   server:
     depends_on:
       - migrator
@@ -85,6 +89,10 @@ services:
       - testchain
     build:
       context: ..
+    volumes:
+      - .:/etc/config
+    ports:
+      - 1337:1337
     command:
       - /bin/sh
       - -c
@@ -93,6 +101,6 @@ services:
         while ! nc -z postgres 5432; do sleep 1; done;
         while ! nc -z testchain 1317; do sleep 1; done;
 
-        RUST_LOG=info /app/release/server --config-file /app/e2e/config.e2e.toml
+        RUST_LOG=info /app/target/release/server --filename /etc/config/config.e2e.toml
 volumes:
   chain-home:

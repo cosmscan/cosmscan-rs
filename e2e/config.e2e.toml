@@ -2,7 +2,7 @@
 fetcher_account_enabled = true
 
 [server]
-host = "127.0.0.1"
+host = "0.0.0.0"
 port = 1337
 
 [chain]
@@ -18,7 +18,7 @@ start_block = 1
 try_resume_from_db = true
 
 [db]
-host = "database"
+host = "postgres"
 port = 5432
 user = "cosmscan"
 password = "cosmscan"
