@@ -168,8 +168,15 @@ impl StorageReader for PersistenceStorage<BackendDB> {
             .map_err(|e| e.into())
     }
 
-    fn list_blocks(&self, _chain_id: i32, _limit: i64, _offset: i64) -> Result<Vec<Block>, Error> {
-        todo!()
+    fn list_blocks(&self, chain_id: i32, limit: i64, offset: i64) -> Result<Vec<Block>, Error> {
+        let conn = self.get_conn()?;
+        all_blocks
+            .filter(blocks::chain_id.eq(chain_id))
+            .order(blocks::height.desc())
+            .limit(limit)
+            .offset(offset)
+            .load::<Block>(&conn)
+            .map_err(|e| e.into())
     }
 
     fn find_latest_block(&self) -> Result<Block, Error> {
