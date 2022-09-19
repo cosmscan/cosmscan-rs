@@ -9,7 +9,7 @@ use hyper::{
     service::{make_service_fn, service_fn},
     Body, Request, Response, Server, StatusCode,
 };
-use log::info;
+use log::{info, error};
 
 use crate::{
     handlers,
@@ -52,7 +52,8 @@ impl ApiServer {
                         let result: Result<Response<Body>, GenericError> =
                             match router::route(req, router.clone(), storage.clone()).await {
                                 Ok(res) => Ok(res),
-                                Err(_) => {
+                                Err(e) => {
+                                    error!("Internal Server Error: {}", e);
                                     let response = Response::builder()
                                         .status(StatusCode::INTERNAL_SERVER_ERROR)
                                         .header(header::CONTENT_TYPE, "application/json")

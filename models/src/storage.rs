@@ -64,7 +64,7 @@ pub trait StorageWriter {
     fn insert_event(&self, event: &NewEvent) -> Result<usize, Error>;
 
     // transaction operations
-    fn insert_transaction(&self, transaction: &NewTransaction) -> Result<usize, Error>;
+    fn insert_transaction(&self, transaction: &NewTransaction) -> Result<Transaction, Error>;
 
     // message operations
     fn insert_message(&self, message: &NewMessage) -> Result<usize, Error>;
@@ -142,11 +142,11 @@ impl StorageWriter for PersistenceStorage<BackendDB> {
             .map_err(|e| e.into())
     }
 
-    fn insert_transaction(&self, transaction: &NewTransaction) -> Result<usize, Error> {
+    fn insert_transaction(&self, transaction: &NewTransaction) -> Result<Transaction, Error> {
         let conn = self.get_conn()?;
         diesel::insert_into(transactions::table)
             .values(transaction)
-            .execute(&conn)
+            .get_result::<Transaction>(&conn)
             .map_err(|e| e.into())
     }
 

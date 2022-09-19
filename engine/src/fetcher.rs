@@ -90,8 +90,11 @@ impl Fetcher {
                 Err(e) => {
                     match e {
                         Error::CosmosClientError(cosmos_client::errors::Error::RPCError(
-                            tendermint_rpc::Error(tendermint_rpc::error::ErrorDetail::Response(ref resp), _),
-                        )) => {                            
+                            tendermint_rpc::Error(
+                                tendermint_rpc::error::ErrorDetail::Response(ref resp),
+                                _,
+                            ),
+                        )) => {
                             if resp.source.code() == tendermint_rpc::Code::InternalError {
                                 // wait for new block
                                 // this error occurred when the block given as parameter is not yet proposed by the validator
@@ -144,7 +147,6 @@ impl Fetcher {
         for result in futures::future::join_all(future_transactions).await {
             match result {
                 Ok(Ok((tx, _events))) => {
-                    info!("events found: {} at hash: {}", _events.len(), tx.transaction_hash.clone());
                     transactions.push(tx);
                     events.extend(_events);
                 }
