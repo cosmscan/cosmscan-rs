@@ -88,11 +88,21 @@ impl Fetcher {
                     current_block += 1;
                 }
                 Err(e) => {
-                    error!(
-                        "failed to get committed block at given height: {}, err: {:?}",
-                        current_block, e
-                    );
-                    tokio::time::sleep(Duration::from_millis(1000)).await;
+                    match e {
+                        Error::CosmosClientError(cosmos_client::errors::Error::RPCError(
+                            tendermint_rpc::Error(tendermint_rpc::error::ErrorDetail::Response(ref resp), _),
+                        )) => {                            
+                            if resp.source.code() == tendermint_rpc::Code::InternalError {
+                                // wait for new block
+                                tokio::time::sleep(Duration::from_millis(2000)).await;
+                            } else {
+                                return Err(e);
+                            }
+                        }
+                        _ => {
+                            return Err(e);
+                        }
+                    }
                 }
             }
         }
@@ -131,6 +141,7 @@ impl Fetcher {
         for result in futures::future::join_all(future_transactions).await {
             match result {
                 Ok(Ok((tx, _events))) => {
+                    info!("events found: {} at hash: {}", _events.len(), tx.transaction_hash.clone());
                     transactions.push(tx);
                     events.extend(_events);
                 }

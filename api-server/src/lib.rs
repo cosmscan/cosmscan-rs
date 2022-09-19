@@ -6,6 +6,7 @@ use serde::Deserialize;
 
 mod errors;
 mod handlers;
+mod responses;
 mod resputil;
 mod router;
 pub mod server;

@@ -28,9 +28,9 @@ type Connection = PooledConnection<ConnectionManager<PgConnection>>;
 /// StorageReader defines a set of methods for reading the database
 pub trait StorageReader {
     // block operations
-    fn find_block_by_height(&self, height: i64) -> Result<Block, Error>;
+    fn find_block_by_height(&self, chain_id: i32, height: i64) -> Result<Block, Error>;
     fn list_blocks(&self, chain_id: i32, limit: i64, offset: i64) -> Result<Vec<Block>, Error>;
-    fn find_latest_block(&self) -> Result<Block, Error>;
+    fn find_latest_block(&self, chain_id: i32) -> Result<Block, Error>;
 
     // chain operations
     fn find_by_chain_id(&self, chain_id: String) -> Result<Chain, Error>;
@@ -40,7 +40,7 @@ pub trait StorageReader {
     fn list_transactions(
         &self,
         chain_id: i32,
-        block_number: i64,
+        block_height: i64,
     ) -> Result<Vec<Transaction>, Error>;
     fn find_transaction_by_hash(&self, tx_hash: String) -> Result<Transaction, Error>;
 
@@ -160,10 +160,10 @@ impl StorageWriter for PersistenceStorage<BackendDB> {
 }
 
 impl StorageReader for PersistenceStorage<BackendDB> {
-    fn find_block_by_height(&self, height: i64) -> Result<Block, Error> {
+    fn find_block_by_height(&self, chain_id: i32, height: i64) -> Result<Block, Error> {
         let conn = self.get_conn()?;
         all_blocks
-            .filter(blocks::height.eq(height))
+            .filter(blocks::chain_id.eq(chain_id).and(blocks::height.eq(height)))
             .first(&conn)
             .map_err(|e| e.into())
     }
@@ -179,9 +179,10 @@ impl StorageReader for PersistenceStorage<BackendDB> {
             .map_err(|e| e.into())
     }
 
-    fn find_latest_block(&self) -> Result<Block, Error> {
+    fn find_latest_block(&self, chain_id: i32) -> Result<Block, Error> {
         let conn = self.get_conn()?;
         all_blocks
+            .filter(blocks::chain_id.eq(chain_id))
             .order(blocks::height.desc())
             .first(&conn)
             .map_err(|e| e.into())
