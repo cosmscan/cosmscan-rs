@@ -264,6 +264,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "cosmos-sdk-proto",
+ "log",
  "reqwest",
  "serde",
  "serde_json",

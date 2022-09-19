@@ -3,6 +3,7 @@ use std::str::from_utf8;
 use cosmos_sdk_proto::cosmos::tx::v1beta1::service_client;
 use tendermint::block;
 use tendermint_rpc::Client as tm_client;
+use log::info;
 
 use crate::{
     bytes_to_tx_hash, convert_block_events,
@@ -102,20 +103,22 @@ impl Client {
         let resp = response::Transaction::from(&response.get_ref().clone());
 
         let mut events: Vec<response::Event> = vec![];
-        if let Some(tx_resp) = &response.into_inner().tx_response {
-            for (seq, evt) in tx_resp.events.iter().enumerate() {
-                for attr in evt.attributes.iter() {
-                    let raw_event = response::Event {
-                        tx_type: EventType::Transaction,
-                        tx_hash: Some(tx_resp.txhash.clone()),
-                        block_height: tx_resp.height,
-                        event_seq: seq as i32,
-                        event_type: evt.r#type.clone(),
-                        event_key: from_utf8(&attr.key)?.to_string(),
-                        event_value: from_utf8(&attr.value)?.to_string(),
-                        indexed: attr.index,
-                    };
-                    events.push(raw_event);
+        if let Some(tx_resp) = &response.get_ref().tx_response {
+            for log in tx_resp.logs.iter() {
+                for (seq, evt) in log.events.iter().enumerate() {
+                    for attr in evt.attributes.iter() {
+                        let raw_event = response::Event {
+                            tx_type: EventType::Transaction,
+                            tx_hash: Some(tx_resp.txhash.clone()),
+                            block_height: tx_resp.height,
+                            event_seq: seq as i32,
+                            event_type: evt.r#type.clone(),
+                            event_key: attr.key.clone(),
+                            event_value: attr.value.clone(),
+                            indexed: false,
+                        };
+                        events.push(raw_event);
+                    }
                 }
             }
         }
