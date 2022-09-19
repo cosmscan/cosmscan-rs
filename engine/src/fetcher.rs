@@ -94,6 +94,9 @@ impl Fetcher {
                         )) => {                            
                             if resp.source.code() == tendermint_rpc::Code::InternalError {
                                 // wait for new block
+                                // this error occurred when the block given as parameter is not yet proposed by the validator
+                                // Caused by:
+                                //      Internal error: height 129 must be less than or equal to the current blockchain height 128 (code: -32603)
                                 tokio::time::sleep(Duration::from_millis(2000)).await;
                             } else {
                                 return Err(e);
