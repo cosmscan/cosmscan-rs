@@ -13,7 +13,7 @@ use log::{info, error};
 
 use crate::{
     handlers,
-    router::{self, Router}, Config, GenericError,
+    router::{self, Router}, Config, GenericError, resputil,
 };
 
 pub struct ApiServer {
@@ -53,13 +53,7 @@ impl ApiServer {
                                 Ok(res) => Ok(res),
                                 Err(e) => {
                                     error!("Internal Server Error: {}", e);
-                                    let response = Response::builder()
-                                        .status(StatusCode::INTERNAL_SERVER_ERROR)
-                                        .header(header::CONTENT_TYPE, "application/json")
-                                        .body(Body::from(
-                                            "{ \"error\": \"Internal Server Error\" }",
-                                        ))?;
-                                    Ok(response)
+                                    resputil::internal_error()
                                 }
                             };
                         result

@@ -62,8 +62,9 @@ pub async fn block_list(
     state: AppState,
 ) -> Result<Response<Body>, GenericError> {
     // parse limit and offset from query string
-    let uri = req.uri().to_string();
-    let query_pairs: HashMap<_, _> = Url::parse(&uri)?.query_pairs().into_owned().collect();
+    let uri = req.uri().to_string().parse::<hyper::Uri>()?;
+    let query = uri.query().ok_or_else(|| "query string missing")?;
+    let query_pairs: HashMap<_, _> = Url::parse(format!("http://localhost?{}", query).as_ref())?.query_pairs().into_owned().collect();
     let limit = match query_pairs.get("limit") {
         Some(limit) => limit.parse::<i64>()?,
         None => 10,
