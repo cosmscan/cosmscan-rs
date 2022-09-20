@@ -25,3 +25,13 @@ pub fn not_found() -> Result<Response<Body>, GenericError> {
         .body(Body::from("{ \"error\": \"content not found\"}"))?;
     Ok(response)
 }
+
+pub fn internal_error() -> Result<Response<Body>, GenericError> {
+    let response = Response::builder()
+        .status(StatusCode::INTERNAL_SERVER_ERROR)
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(
+            "{ \"error\": \"Internal Server Error\" }",
+        ))?;
+    Ok(response)
+}
