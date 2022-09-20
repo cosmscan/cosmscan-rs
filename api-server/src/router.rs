@@ -3,9 +3,9 @@ use std::{collections::HashMap, sync::Arc};
 use async_trait::async_trait;
 use cosmscan_models::{db::BackendDB, storage::PersistenceStorage};
 use futures::Future;
-use hyper::{header, Body, Method, Request, Response, StatusCode};
+use hyper::{Body, Method, Request, Response};
 
-use crate::{errors::Error, AppState, GenericError};
+use crate::{errors::Error, resputil, AppState, GenericError};
 
 type InternalRotuer = route_recognizer::Router<Box<dyn Handler>>;
 
@@ -94,12 +94,6 @@ pub async fn route(
             let params = match_info.params().to_owned();
             handler.handle(req, AppState::new(storage, params)).await
         }
-        Err(_) => {
-            let response = Response::builder()
-                .status(StatusCode::NOT_FOUND)
-                .header(header::CONTENT_TYPE, "application/json")
-                .body(Body::from("{ \"error\": \"Not Found\" }"))?;
-            Ok(response)
-        }
+        Err(_) => resputil::not_found(),
     }
 }

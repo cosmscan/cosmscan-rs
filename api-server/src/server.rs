@@ -7,14 +7,13 @@ use cosmscan_models::{
 use hyper::{
     header,
     service::{make_service_fn, service_fn},
-    Body, Request, Response, Server, StatusCode,
+    Body, Response, Server, StatusCode,
 };
-use log::info;
+use log::{info, error};
 
 use crate::{
     handlers,
-    router::{self, Router},
-    AppState, Config, GenericError,
+    router::{self, Router}, Config, GenericError,
 };
 
 pub struct ApiServer {
@@ -52,7 +51,8 @@ impl ApiServer {
                         let result: Result<Response<Body>, GenericError> =
                             match router::route(req, router.clone(), storage.clone()).await {
                                 Ok(res) => Ok(res),
-                                Err(_) => {
+                                Err(e) => {
+                                    error!("Internal Server Error: {}", e);
                                     let response = Response::builder()
                                         .status(StatusCode::INTERNAL_SERVER_ERROR)
                                         .header(header::CONTENT_TYPE, "application/json")
@@ -78,7 +78,15 @@ impl ApiServer {
     pub fn router(&self) -> Router {
         let mut router = Router::new();
 
-        router.get("/api/block/:block_height", handlers::get_block);
+        router.get("/api/chains/all", handlers::all_chains);
+        router.get("/api/block/latest_block/:chain_id", handlers::latest_block);
+        router.get("/api/block/list", handlers::block_list);
+        router.get("/api/block/:chain_id/:block_height", handlers::get_block);
+        router.get("/api/tx/:tx_hash", handlers::transaction_by_hash);
+        router.get(
+            "/api/tx/list/:chain_id/:block_height",
+            handlers::list_of_transactions,
+        );
 
         router
     }

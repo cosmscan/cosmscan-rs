@@ -17,3 +17,11 @@ pub fn ok_json(json: String) -> Result<Response<Body>, GenericError> {
         .body(Body::from(json))?;
     Ok(response)
 }
+
+pub fn not_found() -> Result<Response<Body>, GenericError> {
+    let response = Response::builder()
+        .status(StatusCode::NOT_FOUND)
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from("{ \"error\": \"content not found\"}"))?;
+    Ok(response)
+}

@@ -45,6 +45,7 @@ impl App<PersistenceStorage<BackendDB>> {
 
         tokio::spawn(async move {
             fetcher.run().await.unwrap();
+            panic!("fetcher is stopped unexpectedly");
         });
 
         // create a committer and run it

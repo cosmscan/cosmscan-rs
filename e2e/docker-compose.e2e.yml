@@ -71,6 +71,7 @@ services:
       - testchain
     build:
       context: ..
+    restart: always
     volumes:
       - .:/etc/config
     command:
