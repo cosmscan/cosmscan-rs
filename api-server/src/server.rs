@@ -7,14 +7,13 @@ use cosmscan_models::{
 use hyper::{
     header,
     service::{make_service_fn, service_fn},
-    Body, Request, Response, Server, StatusCode,
+    Body, Response, Server, StatusCode,
 };
 use log::{info, error};
 
 use crate::{
     handlers,
-    router::{self, Router},
-    AppState, Config, GenericError,
+    router::{self, Router}, Config, GenericError,
 };
 
 pub struct ApiServer {

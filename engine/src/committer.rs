@@ -128,7 +128,7 @@ impl Committer {
                         self.storage.insert_message(&NewMessage {
                             transaction_id: new_tx.id,
                             seq: seq as i32,
-                            rawdata: serde_json::Value::from(msg.clone()),
+                            rawdata: serde_json::Value::from_str(msg.clone().as_str()).expect("cannot unmarshal cosmos message to json"),
                             inserted_at: current_time(),
                         })?;
                     }
@@ -155,8 +155,6 @@ impl Committer {
                         inserted_at: current_time(),
                     })?;
                 }
-
-                // insert messages
 
                 Ok(true)
             })

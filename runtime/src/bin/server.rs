@@ -19,5 +19,8 @@ async fn main() {
         .unwrap_or_else(|_| panic!("wrong config file location: {}", cli.filename));
 
     let server = ApiServer::new(config);
-    server.run().await;
+    match server.run().await {
+        Ok(_) => log::info!("server has been stopped"),
+        Err(e) => log::error!("server stopped unexpectedly {}", e),
+    };
 }

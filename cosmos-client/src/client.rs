@@ -1,7 +1,7 @@
-use std::str::from_utf8;
+
 
 use cosmos_sdk_proto::cosmos::tx::v1beta1::service_client;
-use log::info;
+
 use tendermint::block;
 use tendermint_rpc::Client as tm_client;
 

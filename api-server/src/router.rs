@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use async_trait::async_trait;
 use cosmscan_models::{db::BackendDB, storage::PersistenceStorage};
 use futures::Future;
-use hyper::{header, Body, Method, Request, Response, StatusCode};
+use hyper::{Body, Method, Request, Response};
 
 use crate::{errors::Error, resputil, AppState, GenericError};
 

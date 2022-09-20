@@ -4,7 +4,7 @@ use crate::messages::MsgCommittedBlock;
 
 use cosmos_client::response;
 
-use log::{error, info};
+use log::{info};
 use std::collections::HashMap;
 
 use std::sync::Arc;

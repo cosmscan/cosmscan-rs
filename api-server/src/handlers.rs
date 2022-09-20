@@ -16,7 +16,7 @@ pub async fn all_chains(_: Request<Body>, state: AppState) -> Result<Response<Bo
 
 /// Returns a block by height.
 pub async fn get_block(
-    req: Request<Body>,
+    _req: Request<Body>,
     state: AppState,
 ) -> Result<Response<Body>, GenericError> {
     let chain_id = match state.params.find("chain_id") {
