@@ -4,6 +4,7 @@ fetcher_account_enabled = true
 [server]
 host = "127.0.0.1"
 port = 1337
+allowed_host = "*"
 
 [chain]
 chain_id = "gaia"

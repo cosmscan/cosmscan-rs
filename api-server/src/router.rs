@@ -5,7 +5,11 @@ use cosmscan_models::{db::BackendDB, storage::PersistenceStorage};
 use futures::Future;
 use hyper::{Body, Method, Request, Response};
 
-use crate::{errors::Error, resputil, AppState, GenericError};
+use crate::{
+    errors::Error,
+    resputil::{self, ResponseBuilder},
+    AppState, GenericError,
+};
 
 type InternalRotuer = route_recognizer::Router<Box<dyn Handler>>;
 
@@ -78,6 +82,7 @@ pub async fn route(
     req: Request<Body>,
     router: Arc<Router>,
     storage: Arc<PersistenceStorage<BackendDB>>,
+    resp_builder: Arc<ResponseBuilder>,
 ) -> Result<Response<Body>, GenericError> {
     let method = req.method().clone();
     let path = req.uri().path().to_string();
@@ -92,8 +97,10 @@ pub async fn route(
         Ok(match_info) => {
             let handler = match_info.handler();
             let params = match_info.params().to_owned();
-            handler.handle(req, AppState::new(storage, params)).await
+            handler
+                .handle(req, AppState::new(storage, params, resp_builder))
+                .await
         }
-        Err(_) => resputil::not_found(),
+        Err(_) => resp_builder.not_found(),
     }
 }

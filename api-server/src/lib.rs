@@ -1,6 +1,8 @@
 use std::{fs, sync::Arc};
 
 use cosmscan_models::{config::DBConfig, db::BackendDB, storage::PersistenceStorage};
+use hyper::Response;
+use resputil::ResponseBuilder;
 use route_recognizer::Params;
 use serde::Deserialize;
 
@@ -16,6 +18,7 @@ type GenericError = Box<dyn std::error::Error + Send + Sync + 'static>;
 pub struct AppState {
     pub storage: Arc<PersistenceStorage<BackendDB>>,
     pub params: Params,
+    pub resp_builder: Arc<ResponseBuilder>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -28,11 +31,20 @@ pub struct Config {
 pub struct ServerConfig {
     pub host: String,
     pub port: u16,
+    pub allowed_host: String,
 }
 
 impl AppState {
-    fn new(storage: Arc<PersistenceStorage<BackendDB>>, params: Params) -> Self {
-        Self { storage, params }
+    fn new(
+        storage: Arc<PersistenceStorage<BackendDB>>,
+        params: Params,
+        resp_builder: Arc<ResponseBuilder>,
+    ) -> Self {
+        Self {
+            storage,
+            params,
+            resp_builder,
+        }
     }
 }
 

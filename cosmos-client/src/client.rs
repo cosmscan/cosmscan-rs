@@ -1,5 +1,3 @@
-
-
 use cosmos_sdk_proto::cosmos::tx::v1beta1::service_client;
 
 use tendermint::block;

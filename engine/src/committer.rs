@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc, str::FromStr};
+use std::{collections::HashMap, str::FromStr, sync::Arc};
 
 use cosmos_client::response::EventType;
 use cosmscan_models::{
@@ -128,7 +128,8 @@ impl Committer {
                         self.storage.insert_message(&NewMessage {
                             transaction_id: new_tx.id,
                             seq: seq as i32,
-                            rawdata: serde_json::Value::from_str(msg.clone().as_str()).expect("cannot unmarshal cosmos message to json"),
+                            rawdata: serde_json::Value::from_str(msg.clone().as_str())
+                                .expect("cannot unmarshal cosmos message to json"),
                             inserted_at: current_time(),
                         })?;
                     }

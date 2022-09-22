@@ -11,7 +11,7 @@ pub async fn all_chains(_: Request<Body>, state: AppState) -> Result<Response<Bo
     let chains = storage.all_chains()?;
     let json = serde_json::to_string(&chains)?;
 
-    resputil::ok_json(json)
+    state.resp_builder.ok_json(json)
 }
 
 /// Returns a block by height.
@@ -21,13 +21,13 @@ pub async fn get_block(
 ) -> Result<Response<Body>, GenericError> {
     let chain_id = match state.params.find("chain_id") {
         Some(chain_id) => chain_id.parse::<i32>()?,
-        None => return resputil::invalid_form("chain_id is required"),
+        None => return state.resp_builder.invalid_form("chain_id is required"),
     };
 
     let block_height = match state.params.find("block_height") {
         Some(block_height) => block_height.parse::<i64>()?,
         None => {
-            return resputil::invalid_form("block_height is missing");
+            return state.resp_builder.invalid_form("block_height is missing");
         }
     };
 
@@ -35,7 +35,7 @@ pub async fn get_block(
     let block = storage.find_block_by_height(chain_id, block_height)?;
     let json = serde_json::to_string(&block)?;
 
-    resputil::ok_json(json)
+    state.resp_builder.ok_json(json)
 }
 
 /// Returns a latestblock
@@ -45,14 +45,14 @@ pub async fn latest_block(
 ) -> Result<Response<Body>, GenericError> {
     let chain_id = match state.params.find("chain_id") {
         Some(chain_id) => chain_id.parse::<i32>()?,
-        None => return resputil::invalid_form("chain_id is required"),
+        None => return state.resp_builder.invalid_form("chain_id is required"),
     };
 
     let storage = state.storage;
     let block = storage.find_latest_block(chain_id)?;
     let json = serde_json::to_string(&block)?;
 
-    resputil::ok_json(json)
+    state.resp_builder.ok_json(json)
 }
 
 /// Returns list of blocks by given chain_id
@@ -65,7 +65,10 @@ pub async fn block_list(
     let uri = req.uri().to_string().parse::<hyper::Uri>()?;
     let query = uri.query();
     let query_pairs: HashMap<_, _> = match query {
-        Some(q) => Url::parse(format!("http://localhost?{}", q).as_ref())?.query_pairs().into_owned().collect(),
+        Some(q) => Url::parse(format!("http://localhost?{}", q).as_ref())?
+            .query_pairs()
+            .into_owned()
+            .collect(),
         None => HashMap::new(),
     };
 
@@ -82,7 +85,7 @@ pub async fn block_list(
     let chain_id = match state.params.find("chain_id") {
         Some(chain_id) => chain_id.parse::<i32>()?,
         None => {
-            return resputil::invalid_form("chain_id is missing");
+            return state.resp_builder.invalid_form("chain_id is missing");
         }
     };
 
@@ -90,7 +93,7 @@ pub async fn block_list(
     let blocks = storage.list_blocks(chain_id, limit, offset)?;
     let json = serde_json::to_string(&blocks)?;
 
-    resputil::ok_json(json)
+    state.resp_builder.ok_json(json)
 }
 
 /// Returns the transaction by hash
@@ -101,7 +104,7 @@ pub async fn transaction_by_hash(
     let tx_hash = match state.params.find("tx_hash") {
         Some(tx_hash) => tx_hash.to_string(),
         None => {
-            return resputil::invalid_form("tx_hash is missing");
+            return state.resp_builder.invalid_form("tx_hash is missing");
         }
     };
 
@@ -112,7 +115,7 @@ pub async fn transaction_by_hash(
     let result = responses::Transaction::new(tx, events, messages);
     let json = serde_json::to_string(&result)?;
 
-    resputil::ok_json(json)
+    state.resp_builder.ok_json(json)
 }
 
 /// Returns the transaction list by block height and chain_id
@@ -123,19 +126,19 @@ pub async fn list_of_transactions(
     let chain_id = match state.params.find("chain_id") {
         Some(chain_id) => chain_id.parse::<i32>()?,
         None => {
-            return resputil::invalid_form("chain_id is missing");
+            return state.resp_builder.invalid_form("chain_id is missing");
         }
     };
 
     let block_height = match state.params.find("block_height") {
         Some(block_height) => block_height.parse::<i64>()?,
         None => {
-            return resputil::invalid_form("block_height is missing");
+            return state.resp_builder.invalid_form("block_height is missing");
         }
     };
 
     let storage = state.storage;
     let txes = storage.list_transactions(chain_id, block_height)?;
     let json = serde_json::to_string(&txes)?;
-    resputil::ok_json(json)
+    state.resp_builder.ok_json(json)
 }
