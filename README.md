@@ -9,7 +9,7 @@ Opensource indexer engine & explorer web for cosmos blockchain.
 
 ## Motivation
 In ethereum, Blockscout is best opensource blockchain explorer, [as you can see here](https://blockscout.com/eth/mainnet/)
-It seems super-duper enterprise level blockchain explorer, and cool thing is that it's opensource !
+It seems super-duper enterprise level blockchain explorer, and the cool thing is that it's open source!
 
 But, In cosmos ecosystem there is no fansy opensource explorer.
 So then many teams rely on validators who built un-opened blockchain explorer such as mintscan.
