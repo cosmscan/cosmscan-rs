@@ -1,11 +1,19 @@
-## Caution
-Cosmscan is not ready to go in production.
-This is very rapidly changed and under developement.
+> Caution
+> Cosmscan is not ready to go in production.
+> This is very rapidly changed and under developement.
 
 ## Cosmscan
-Cosmscan is an explorer service for cosmos based blockchain.
+Opensource indexer engine & explorer web for cosmos blockchain.
 
-It's inherently built for enterprise-level.
+## Motivation
+In ethereum, Blockscout is best opensource blockchain explorer, [as you can see here](https://blockscout.com/eth/mainnet/)
+It seems super-duper enterprise level blockchain explorer, and cool thing is that it's opensource !
+
+But, In cosmos ecosystem there is no fansy opensource explorer.
+So then many teams rely on validators who built un-opened blockchain explorer such as mintscan.
+
+Therefore, I wished to build opensource blockchain explorer and anyone can install their own server.
+It would be very helpful for teams to focus on appchain development only.
 
 ## Setting up the Database.
 ### Install diesel
