@@ -4,7 +4,7 @@ use sha2::{Digest, Sha256};
 pub mod committer;
 pub mod config;
 pub mod errors;
-pub mod fetcher;
+pub mod fetchers;
 pub mod indexer;
 pub mod messages;
 

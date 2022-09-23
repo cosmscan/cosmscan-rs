@@ -126,7 +126,7 @@ impl Client {
 
     /// Returns a transaction messages by tx hash
     /// It uses REST API, because prost cannot automatically convert it into json string
-    pub async fn get_tx_messages(&mut self, hash: String) -> Result<Vec<String>, Error> {
+    pub async fn get_tx_messages(&self, hash: String) -> Result<Vec<String>, Error> {
         let url = format!(
             "{}/cosmos/tx/v1beta1/txs/{}",
             self.config.rest_api_endpoint.clone(),

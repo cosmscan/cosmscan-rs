@@ -1,6 +1,8 @@
+use std::sync::Arc;
+
 use crate::committer::Committer;
 use crate::current_time;
-use crate::fetcher::Fetcher;
+use crate::fetchers::committed_block_fetcher::{CommittedBlockFetcher, CommittedBlockWorker};
 use crate::messages::MsgCommittedBlock;
 use crate::{config::Config, errors::Error};
 
@@ -12,12 +14,15 @@ use cosmscan_models::{
 };
 
 use log::error;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, Mutex};
+
+type SharedClient = Arc<Mutex<cosmos_client::client::Client>>;
 
 /// Indexer is for fetching ABCI blocks, transactions and logs.
 pub struct Indexer<T: StorageWriter + StorageReader> {
     pub config: Config,
     pub storage: T,
+    pub client: SharedClient,
 }
 
 impl Indexer<PersistenceStorage<BackendDB>> {
@@ -25,7 +30,23 @@ impl Indexer<PersistenceStorage<BackendDB>> {
         let db = BackendDB::new(config.db.clone());
         let storage = PersistenceStorage::new(db);
 
-        Ok(Indexer { config, storage })
+        // create a shared cosmos client
+        let client_config = cosmos_client::client::ClientConfig {
+            tendermint_rpc_endpoint: config.fetcher.tendermint_rpc_endpoint.clone(),
+            grpc_endpoint: config.fetcher.grpc_endpoint.clone(),
+            rest_api_endpoint: config.fetcher.rest_api_endpoint.clone(),
+        };
+
+        let client = cosmos_client::client::Client::new(client_config)
+            .await
+            .map(Mutex::new)
+            .map(Arc::new)?;
+
+        Ok(Indexer {
+            config,
+            storage,
+            client,
+        })
     }
 
     pub async fn start(&self) -> Result<(), Error> {
@@ -38,26 +59,20 @@ impl Indexer<PersistenceStorage<BackendDB>> {
             None => self.config.fetcher.start_block,
         };
 
-        // create a fetcher and run it
-        let fetcher_config = self.config.fetcher.clone();
-        let fetcher = Fetcher::new(fetcher_config, committed_block_s, start_block).await?;
-
-        tokio::spawn(async move {
-            fetcher.run().await.unwrap();
-            panic!("fetcher is stopped unexpectedly");
-        });
+        let committed_block_fetcher = CommittedBlockFetcher::new(self.client.clone()).await?;
+        CommittedBlockWorker::spawn(committed_block_fetcher, committed_block_s, start_block);
 
         // create a committer and run it
         let db_config = self.config.db.clone();
         let committer = Committer::new(db_config, chain);
 
-        tokio::select! {
-            Some(val) = committed_block_r.recv() => {
-                committer.commit_block(val).unwrap();
+        loop {
+            tokio::select! {
+                Some(val) = committed_block_r.recv() => {
+                    committer.commit_block(val).unwrap();
+                }
             }
         }
-
-        Ok(())
     }
 
     // load chain info from storage
