@@ -7,7 +7,7 @@ use hyper::{Body, Method, Request, Response};
 
 use crate::{
     errors::Error,
-    resputil::{self, ResponseBuilder},
+    resputil::{ResponseBuilder},
     AppState, GenericError,
 };
 

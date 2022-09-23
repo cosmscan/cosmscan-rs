@@ -1,7 +1,7 @@
 use std::{fs, sync::Arc};
 
 use cosmscan_models::{config::DBConfig, db::BackendDB, storage::PersistenceStorage};
-use hyper::Response;
+
 use resputil::ResponseBuilder;
 use route_recognizer::Params;
 use serde::Deserialize;
