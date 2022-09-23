@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr, sync::Arc};
+use std::str::FromStr;
 
 use cosmos_client::response::EventType;
 use cosmscan_models::{
@@ -13,75 +13,27 @@ use cosmscan_models::{
     },
     storage::{PersistenceStorage, StorageWriter},
 };
-use log::{error, info};
-use tokio::{
-    sync::{mpsc, Mutex},
-    task::JoinHandle,
-};
 
 use crate::{current_time, errors::Error, messages::MsgCommittedBlock};
 
 pub struct Committer {
     storage: PersistenceStorage<BackendDB>,
     chain_info: Chain,
-    checkpoint_block: i64,
-    committed_blocks: Arc<Mutex<HashMap<i64, MsgCommittedBlock>>>,
-    subscribe_rx: mpsc::UnboundedReceiver<MsgCommittedBlock>,
-    receive_loop: JoinHandle<()>,
 }
 
 impl Committer {
     /// Creates a new committer instance
-    pub fn new(
-        dbconfig: DBConfig,
-        chain_info: Chain,
-        committed_block_c: mpsc::Receiver<MsgCommittedBlock>,
-        checkpoint_block: i64,
-    ) -> Committer {
+    pub fn new(dbconfig: DBConfig, chain_info: Chain) -> Committer {
         let backend_db = BackendDB::new(dbconfig);
         let storage = PersistenceStorage::new(backend_db);
-        let committed_blocks: Arc<Mutex<HashMap<i64, MsgCommittedBlock>>> =
-            Arc::new(Mutex::new(HashMap::new()));
-        let (subscribe_tx, subscribe_rx) = mpsc::unbounded_channel();
 
         Committer {
             storage,
             chain_info,
-            checkpoint_block,
-            committed_blocks,
-            subscribe_rx,
-            receive_loop: tokio::spawn(Committer::run_receive_loop(
-                committed_block_c,
-                subscribe_tx,
-            )),
         }
     }
 
-    /// Run committing block loop
-    /// It receives committed blocks through channel and commits them to storage.
-    pub async fn run(&mut self) -> Result<(), Error> {
-        while let Some(msg) = self.subscribe_rx.recv().await {
-            let given_height = msg.block.height;
-            if given_height == self.checkpoint_block {
-                match self.commit_to_storage(&self.chain_info, msg) {
-                    Ok(_) => {
-                        info!("committed new block at {}", given_height);
-                        self.checkpoint_block += 1;
-                    }
-                    Err(err) => {
-                        error!("failed to commit data to the storage: {:?}", err);
-                        return Err(err);
-                    }
-                }
-            } else {
-                self.committed_blocks.lock().await.insert(given_height, msg);
-            }
-        }
-
-        Ok(())
-    }
-
-    pub fn commit_to_storage(&self, chain: &Chain, msg: MsgCommittedBlock) -> Result<bool, Error> {
+    pub fn commit_block(&self, msg: MsgCommittedBlock) -> Result<bool, Error> {
         self.storage
             .within_transaction(|| {
                 let block = msg.block;
@@ -89,7 +41,7 @@ impl Committer {
 
                 // insert block
                 self.storage.insert_block(&NewBlock {
-                    chain_id: chain.id,
+                    chain_id: self.chain_info.id,
                     height: block.height,
                     block_hash: block.block_hash,
                     prev_hash: block.prev_hash,
@@ -109,7 +61,7 @@ impl Committer {
                 // insert transactions
                 for tx in txs {
                     let new_tx = self.storage.insert_transaction(&NewTransaction {
-                        chain_id: chain.id,
+                        chain_id: self.chain_info.id,
                         height: tx.height,
                         transaction_hash: tx.transaction_hash,
                         code: tx.code,
@@ -144,7 +96,7 @@ impl Committer {
                     };
 
                     self.storage.insert_event(&NewEvent {
-                        chain_id: chain.id,
+                        chain_id: self.chain_info.id,
                         tx_type: _type,
                         tx_hash: event.tx_hash,
                         block_height: event.block_height,
@@ -160,19 +112,5 @@ impl Committer {
                 Ok(true)
             })
             .map_err(|e| e.into())
-    }
-
-    pub async fn run_receive_loop(
-        mut channel: mpsc::Receiver<MsgCommittedBlock>,
-        subscribe_tx: mpsc::UnboundedSender<MsgCommittedBlock>,
-    ) -> () {
-        while let Some(msg) = channel.recv().await {
-            subscribe_tx.send(msg).unwrap();
-        }
-    }
-
-    pub async fn shudown(self) {
-        self.receive_loop.abort();
-        self.receive_loop.await.unwrap();
     }
 }

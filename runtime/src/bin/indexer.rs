@@ -1,5 +1,5 @@
 use clap::Parser;
-use cosmscan_indexer::{indexer::Indexer, config::Config};
+use cosmscan_indexer::{config::Config, indexer::Indexer};
 
 use log::{error, info};
 

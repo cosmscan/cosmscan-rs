@@ -29,8 +29,7 @@ impl Indexer<PersistenceStorage<BackendDB>> {
     }
 
     pub async fn start(&self) -> Result<(), Error> {
-        let (sender_committed_block, receiver_committed_block) =
-            mpsc::channel::<MsgCommittedBlock>(100);
+        let (committed_block_s, mut committed_block_r) = mpsc::channel::<MsgCommittedBlock>(100);
 
         // get chain info from database, if it doesn't exists, create a new one.
         let chain = self.load_chain_or_store()?;
@@ -41,7 +40,7 @@ impl Indexer<PersistenceStorage<BackendDB>> {
 
         // create a fetcher and run it
         let fetcher_config = self.config.fetcher.clone();
-        let fetcher = Fetcher::new(fetcher_config, sender_committed_block, start_block).await?;
+        let fetcher = Fetcher::new(fetcher_config, committed_block_s, start_block).await?;
 
         tokio::spawn(async move {
             fetcher.run().await.unwrap();
@@ -50,8 +49,13 @@ impl Indexer<PersistenceStorage<BackendDB>> {
 
         // create a committer and run it
         let db_config = self.config.db.clone();
-        let mut committer = Committer::new(db_config, chain, receiver_committed_block, start_block);
-        committer.run().await?;
+        let committer = Committer::new(db_config, chain);
+
+        tokio::select! {
+            Some(val) = committed_block_r.recv() => {
+                committer.commit_block(val).unwrap();
+            }
+        }
 
         Ok(())
     }

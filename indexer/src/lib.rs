@@ -1,11 +1,11 @@
 use chrono::{NaiveDateTime, Utc};
 use sha2::{Digest, Sha256};
 
-pub mod indexer;
 pub mod committer;
 pub mod config;
 pub mod errors;
 pub mod fetcher;
+pub mod indexer;
 pub mod messages;
 
 pub fn current_time() -> NaiveDateTime {

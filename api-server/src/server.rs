@@ -12,7 +12,7 @@ use log::{error, info};
 
 use crate::{
     handlers,
-    resputil::{ResponseBuilder},
+    resputil::ResponseBuilder,
     router::{self, Router},
     Config, GenericError,
 };
