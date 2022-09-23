@@ -20,9 +20,9 @@ async fn main() {
     let config = Config::from_file(cli.filename.clone())
         .unwrap_or_else(|_| panic!("wrong config file location: {}", cli.filename));
 
-    // start a fetcher
-    let fetcher = Indexer::new(config).await.unwrap();
-    match fetcher.start().await {
+    // start a indexer
+    let indexer = Indexer::new(config).await.unwrap();
+    match indexer.start().await {
         Ok(_) => {
             info!("indexer finished");
         }

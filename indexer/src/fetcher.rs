@@ -5,7 +5,6 @@ use crate::messages::MsgCommittedBlock;
 use cosmos_client::response;
 
 use log::info;
-use std::collections::HashMap;
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -51,40 +50,17 @@ impl Fetcher {
         }
 
         let mut current_block = self.start_block;
-        let journal: Arc<Mutex<HashMap<i64, MsgCommittedBlock>>> =
-            Arc::new(Mutex::new(HashMap::new()));
-        let mut checkpoint_block = current_block;
-
-        tokio::spawn({
-            let _journal = journal.clone();
-            let sender = self.sender.clone();
-            async move {
-                // send journal data to result channel
-                loop {
-                    let mut journal = _journal.lock().await;
-                    if let Some(committed_block) = journal.get(&checkpoint_block) {
-                        sender.send(committed_block.clone()).await.unwrap();
-                        journal.remove(&checkpoint_block);
-                        checkpoint_block += 1;
-                    }
-
-                    tokio::time::sleep(Duration::from_millis(200)).await;
-                }
-            }
-        });
 
         loop {
             match self.committed_block_at(current_block).await {
                 Ok(committed_block) => {
-                    // insert to the journal and print size of journal
-                    let mut journal = journal.lock().await;
+                    let sender = self.sender.clone();
                     info!(
                         "commit block | block_number: {}, hash: {}",
                         current_block,
                         committed_block.block.block_hash.clone(),
                     );
-                    info!("journal size: {}", journal.len());
-                    journal.insert(current_block, committed_block);
+                    sender.send(committed_block).await.unwrap();
                     current_block += 1;
                 }
                 Err(e) => {
