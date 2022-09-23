@@ -5,15 +5,14 @@ use cosmscan_models::{
     storage::PersistenceStorage,
 };
 use hyper::{
-    header,
     service::{make_service_fn, service_fn},
-    Body, Response, Server, StatusCode,
+    Body, Response, Server,
 };
 use log::{error, info};
 
 use crate::{
     handlers,
-    resputil::{self, ResponseBuilder},
+    resputil::{ResponseBuilder},
     router::{self, Router},
     Config, GenericError,
 };
