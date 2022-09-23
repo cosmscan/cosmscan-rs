@@ -1,4 +1,4 @@
-[engine]
+[indexer]
 fetcher_account_enabled = true
 
 [server]

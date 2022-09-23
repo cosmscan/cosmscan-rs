@@ -12,6 +12,6 @@ toml = "0.5.9"
 serde = { version = "1.0", features = ["derive"] }
 clap = { version = "3.0.0", features = ["derive"] }
 cosmscan-models = { path = "../models", version = "0.1.0" }
-cosmscan-engine = { path = "../engine", version = "0.1.0" }
+cosmscan-indexer = { path = "../indexer", version = "0.1.0" }
 api-server = { path = "../api-server", version = "0.1.0" }
 tokio = { version = "1", features = ["full"] }
