@@ -1,3 +1,7 @@
+## Caution
+Cosmscan is not ready to go in production.
+This is very rapidly changed and under developement.
+
 ## Cosmscan
 Cosmscan is an explorer service for cosmos based blockchain.
 
