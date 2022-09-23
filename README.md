@@ -1,4 +1,4 @@
-> Caution
+> ⚠️ Caution ⚠️
 > 
 > Cosmscan is not ready to go in production.
 > 
