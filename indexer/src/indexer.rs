@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
 use crate::committer::Committer;
-use crate::current_time;
-use crate::fetchers::committed_block_fetcher::{CommittedBlockFetcher, CommittedBlockWorker};
+use crate::fetchers::committed_block_fetcher::CommittedBlockFetcher;
 use crate::messages::MsgCommittedBlock;
 use crate::{config::Config, errors::Error};
+use crate::{current_time, SharedClient};
 
 use cosmscan_models::models::chain::{Chain, NewChain};
 use cosmscan_models::storage::StorageReader;
@@ -15,8 +15,6 @@ use cosmscan_models::{
 
 use log::error;
 use tokio::sync::{mpsc, Mutex};
-
-type SharedClient = Arc<Mutex<cosmos_client::client::Client>>;
 
 /// Indexer is for fetching ABCI blocks, transactions and logs.
 pub struct Indexer<T: StorageWriter + StorageReader> {
@@ -59,8 +57,9 @@ impl Indexer<PersistenceStorage<BackendDB>> {
             None => self.config.fetcher.start_block,
         };
 
+        // run fetcher
         let committed_block_fetcher = CommittedBlockFetcher::new(self.client.clone()).await?;
-        CommittedBlockWorker::spawn(committed_block_fetcher, committed_block_s, start_block);
+        committed_block_fetcher.run_loop(committed_block_s, start_block);
 
         // create a committer and run it
         let db_config = self.config.db.clone();
