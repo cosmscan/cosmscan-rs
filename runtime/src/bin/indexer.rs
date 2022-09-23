@@ -1,5 +1,5 @@
 use clap::Parser;
-use cosmscan_engine::{app::App, config::Config};
+use cosmscan_indexer::{indexer::Indexer, config::Config};
 
 use log::{error, info};
 
@@ -21,14 +21,14 @@ async fn main() {
         .unwrap_or_else(|_| panic!("wrong config file location: {}", cli.filename));
 
     // start a fetcher
-    let fetcher = App::new(config).await.unwrap();
+    let fetcher = Indexer::new(config).await.unwrap();
     match fetcher.start().await {
         Ok(_) => {
-            info!("engine app finished");
+            info!("indexer finished");
         }
         Err(e) => {
             error!("unexpected error during fetching blockchain: {:?}", e);
-            panic!("teardown the engine");
+            panic!("teardown the indexer");
         }
     }
 }

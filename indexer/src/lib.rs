@@ -1,7 +1,7 @@
 use chrono::{NaiveDateTime, Utc};
 use sha2::{Digest, Sha256};
 
-pub mod app;
+pub mod indexer;
 pub mod committer;
 pub mod config;
 pub mod errors;

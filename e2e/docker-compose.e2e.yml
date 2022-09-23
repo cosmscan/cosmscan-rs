@@ -64,7 +64,7 @@ services:
 
         echo "DATABASE_URL=postgres://cosmscan:cosmscan@postgres/cosmscan" > .env
         diesel migration run
-  engine:
+  indexer:
     depends_on:
       - migrator
       - postgres
@@ -82,7 +82,7 @@ services:
         while ! nc -z postgres 5432; do sleep 1; done;
         while ! nc -z testchain 1317; do sleep 1; done;
 
-        RUST_LOG=info /app/target/release/engine --filename /etc/config/config.e2e.toml
+        RUST_LOG=info /app/target/release/indexer --filename /etc/config/config.e2e.toml
   server:
     depends_on:
       - migrator

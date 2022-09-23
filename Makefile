@@ -17,9 +17,9 @@ undo-migrate:
 	@echo "Migrating database..."
 	cd models && diesel migration redo && cd ..
 
-run-fetcher:
+run-indexer:
 	@echo "Running fetcher..."
-	RUST_LOG=info cargo run --bin engine -- --filename $(CONFIG_FILE)
+	RUST_LOG=info cargo run --bin indexer -- --filename $(CONFIG_FILE)
 
 run-server:
 	@echo "Running server..."

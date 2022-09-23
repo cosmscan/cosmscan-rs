@@ -14,18 +14,18 @@ use cosmscan_models::{
 use log::error;
 use tokio::sync::mpsc;
 
-/// App is for fetching ABCI blocks, transactions and logs.
-pub struct App<T: StorageWriter + StorageReader> {
+/// Indexer is for fetching ABCI blocks, transactions and logs.
+pub struct Indexer<T: StorageWriter + StorageReader> {
     pub config: Config,
     pub storage: T,
 }
 
-impl App<PersistenceStorage<BackendDB>> {
+impl Indexer<PersistenceStorage<BackendDB>> {
     pub async fn new(config: Config) -> Result<Self, Error> {
         let db = BackendDB::new(config.db.clone());
         let storage = PersistenceStorage::new(db);
 
-        Ok(App { config, storage })
+        Ok(Indexer { config, storage })
     }
 
     pub async fn start(&self) -> Result<(), Error> {
