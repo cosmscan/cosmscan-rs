@@ -15,7 +15,7 @@ But, In cosmos ecosystem there is no fansy opensource explorer.
 So then many teams rely on validators who built un-opened blockchain explorer such as mintscan.
 
 Therefore, I wished to build opensource blockchain explorer and anyone can install their own server.
-It would be very helpful for teams to focus on developing appchain only.
+It would be very helpful for teams to only focus on developing appchain.
 
 ## Setting up the Database.
 ### Install diesel
