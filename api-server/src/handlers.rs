@@ -119,7 +119,7 @@ pub async fn transaction_by_hash(
 }
 
 /// Returns the transaction list by block height and chain_id
-pub async fn list_of_transactions(
+pub async fn transaction_list_in_block(
     _: Request<Body>,
     state: AppState,
 ) -> Result<Response<Body>, GenericError> {

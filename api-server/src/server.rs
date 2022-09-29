@@ -92,8 +92,8 @@ impl ApiServer {
         router.get("/api/block/:chain_id/:block_height", handlers::get_block);
         router.get("/api/tx/:tx_hash", handlers::transaction_by_hash);
         router.get(
-            "/api/tx/list/:chain_id/:block_height",
-            handlers::list_of_transactions,
+            "/api/tx/list/:chain_id/at/:block_height",
+            handlers::transaction_list_in_block,
         );
 
         router
