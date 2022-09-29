@@ -16,5 +16,5 @@ If you run the command above:
 * postgres database
 * database viewer called adminer
   * please visit `localhost:8082` in your browser.
-* engine start to crawl all the blocks, transactions and events from the test chain, and then it stores them in the dataase.
+* indexer start to crawl all the blocks, transactions and events from the test chain, and then it stores them in the dataase.
 * api server start to listen requests.

@@ -5,7 +5,7 @@ use std::fs;
 
 #[derive(Debug, PartialEq, Deserialize)]
 pub struct Config {
-    pub engine: EngineConfig,
+    pub indexer: IndexerConfig,
     pub fetcher: FetcherConfig,
     pub chain: ChainConfig,
     pub db: DBConfig,
@@ -29,7 +29,7 @@ pub struct FetcherConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
-pub struct EngineConfig {
+pub struct IndexerConfig {
     pub fetcher_account_enabled: bool,
 }
 

@@ -1,12 +1,17 @@
+use std::sync::Arc;
+
 use chrono::{NaiveDateTime, Utc};
 use sha2::{Digest, Sha256};
+use tokio::sync::Mutex;
 
-pub mod app;
 pub mod committer;
 pub mod config;
 pub mod errors;
-pub mod fetcher;
+pub mod fetchers;
+pub mod indexer;
 pub mod messages;
+
+pub type SharedClient = Arc<Mutex<cosmos_client::client::Client>>;
 
 pub fn current_time() -> NaiveDateTime {
     NaiveDateTime::from_timestamp(Utc::now().timestamp(), 0)

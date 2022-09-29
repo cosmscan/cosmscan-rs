@@ -4,7 +4,7 @@ use cosmscan_models::storage::StorageReader;
 use hyper::{Body, Request, Response};
 use url::Url;
 
-use crate::{responses, resputil, AppState, GenericError};
+use crate::{responses, AppState, GenericError};
 
 pub async fn all_chains(_: Request<Body>, state: AppState) -> Result<Response<Body>, GenericError> {
     let storage = state.storage;

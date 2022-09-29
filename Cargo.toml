@@ -2,7 +2,7 @@
 members = [
     "runtime",
     "models",
-    "engine",
+    "indexer",
     "cosmos-client",
     "api-server",
 ]

@@ -1,4 +1,4 @@
-use cosmos_sdk_proto::cosmos::tx::v1beta1::service_client;
+use cosmos_sdk_proto::cosmos::{self, tx::v1beta1::service_client};
 
 use tendermint::block;
 use tendermint_rpc::Client as tm_client;
@@ -9,6 +9,9 @@ use crate::{
     response::{self, EventType},
 };
 
+type TxClient = service_client::ServiceClient<tonic::transport::Channel>;
+type StakingClient = cosmos::staking::v1beta1::query_client::QueryClient<tonic::transport::Channel>;
+
 pub struct ClientConfig {
     pub tendermint_rpc_endpoint: String,
     pub grpc_endpoint: String,
@@ -16,7 +19,7 @@ pub struct ClientConfig {
 }
 pub struct Client {
     tm_client: tendermint_rpc::HttpClient,
-    grpc_client: service_client::ServiceClient<tonic::transport::Channel>,
+    tx_client: TxClient,
     config: ClientConfig,
 }
 
@@ -27,13 +30,13 @@ impl Client {
         let tm_client =
             tendermint_rpc::HttpClient::new(config.tendermint_rpc_endpoint.clone().as_str())
                 .map_err(|e| Error::from(e))?;
-        let grpc_client = service_client::ServiceClient::connect(config.grpc_endpoint.clone())
+        let tx_client = TxClient::connect(config.grpc_endpoint.clone())
             .await
             .map_err(|e| Error::from(e))?;
 
         Ok(Client {
             tm_client,
-            grpc_client,
+            tx_client,
             config,
         })
     }
@@ -93,7 +96,7 @@ impl Client {
         let request = cosmos_sdk_proto::cosmos::tx::v1beta1::GetTxRequest { hash };
 
         let response = self
-            .grpc_client
+            .tx_client
             .get_tx(request)
             .await
             .map_err(|e| Error::from(e))?;
@@ -126,7 +129,7 @@ impl Client {
 
     /// Returns a transaction messages by tx hash
     /// It uses REST API, because prost cannot automatically convert it into json string
-    pub async fn get_tx_messages(&mut self, hash: String) -> Result<Vec<String>, Error> {
+    pub async fn get_tx_messages(&self, hash: String) -> Result<Vec<String>, Error> {
         let url = format!(
             "{}/cosmos/tx/v1beta1/txs/{}",
             self.config.rest_api_endpoint.clone(),

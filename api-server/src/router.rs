@@ -5,11 +5,7 @@ use cosmscan_models::{db::BackendDB, storage::PersistenceStorage};
 use futures::Future;
 use hyper::{Body, Method, Request, Response};
 
-use crate::{
-    errors::Error,
-    resputil::{self, ResponseBuilder},
-    AppState, GenericError,
-};
+use crate::{errors::Error, resputil::ResponseBuilder, AppState, GenericError};
 
 type InternalRotuer = route_recognizer::Router<Box<dyn Handler>>;
 

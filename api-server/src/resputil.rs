@@ -15,7 +15,10 @@ impl ResponseBuilder {
         let response = Response::builder()
             .status(StatusCode::BAD_REQUEST)
             .header(header::CONTENT_TYPE, "application/json")
-            .header(header::ACCESS_CONTROL_ALLOW_ORIGIN, self.allowed_host.clone())
+            .header(
+                header::ACCESS_CONTROL_ALLOW_ORIGIN,
+                self.allowed_host.clone(),
+            )
             .body(Body::from(format!("{{ \"error\": \"{}\" }}", error)))?;
         Ok(response)
     }
@@ -24,7 +27,10 @@ impl ResponseBuilder {
         let response = Response::builder()
             .status(StatusCode::OK)
             .header(header::CONTENT_TYPE, "application/json")
-            .header(header::ACCESS_CONTROL_ALLOW_ORIGIN, self.allowed_host.clone())
+            .header(
+                header::ACCESS_CONTROL_ALLOW_ORIGIN,
+                self.allowed_host.clone(),
+            )
             .body(Body::from(json))?;
         Ok(response)
     }
@@ -33,7 +39,10 @@ impl ResponseBuilder {
         let response = Response::builder()
             .status(StatusCode::NOT_FOUND)
             .header(header::CONTENT_TYPE, "application/json")
-            .header(header::ACCESS_CONTROL_ALLOW_ORIGIN, self.allowed_host.clone())
+            .header(
+                header::ACCESS_CONTROL_ALLOW_ORIGIN,
+                self.allowed_host.clone(),
+            )
             .body(Body::from("{ \"error\": \"content not found\"}"))?;
         Ok(response)
     }
@@ -42,7 +51,10 @@ impl ResponseBuilder {
         let response = Response::builder()
             .status(StatusCode::INTERNAL_SERVER_ERROR)
             .header(header::CONTENT_TYPE, "application/json")
-            .header(header::ACCESS_CONTROL_ALLOW_ORIGIN, self.allowed_host.clone())
+            .header(
+                header::ACCESS_CONTROL_ALLOW_ORIGIN,
+                self.allowed_host.clone(),
+            )
             .body(Body::from("{ \"error\": \"Internal Server Error\" }"))?;
         Ok(response)
     }

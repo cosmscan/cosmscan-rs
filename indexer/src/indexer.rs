@@ -1,8 +1,10 @@
+use std::sync::Arc;
+
 use crate::committer::Committer;
-use crate::current_time;
-use crate::fetcher::Fetcher;
+use crate::fetchers::committed_block_fetcher::CommittedBlockFetcher;
 use crate::messages::MsgCommittedBlock;
 use crate::{config::Config, errors::Error};
+use crate::{current_time, SharedClient};
 
 use cosmscan_models::models::chain::{Chain, NewChain};
 use cosmscan_models::storage::StorageReader;
@@ -12,25 +14,41 @@ use cosmscan_models::{
 };
 
 use log::error;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, Mutex};
 
-/// App is for fetching ABCI blocks, transactions and logs.
-pub struct App<T: StorageWriter + StorageReader> {
+/// Indexer is for fetching ABCI blocks, transactions and logs.
+pub struct Indexer<T: StorageWriter + StorageReader> {
     pub config: Config,
     pub storage: T,
+    pub client: SharedClient,
 }
 
-impl App<PersistenceStorage<BackendDB>> {
+impl Indexer<PersistenceStorage<BackendDB>> {
     pub async fn new(config: Config) -> Result<Self, Error> {
         let db = BackendDB::new(config.db.clone());
         let storage = PersistenceStorage::new(db);
 
-        Ok(App { config, storage })
+        // create a shared cosmos client
+        let client_config = cosmos_client::client::ClientConfig {
+            tendermint_rpc_endpoint: config.fetcher.tendermint_rpc_endpoint.clone(),
+            grpc_endpoint: config.fetcher.grpc_endpoint.clone(),
+            rest_api_endpoint: config.fetcher.rest_api_endpoint.clone(),
+        };
+
+        let client = cosmos_client::client::Client::new(client_config)
+            .await
+            .map(Mutex::new)
+            .map(Arc::new)?;
+
+        Ok(Indexer {
+            config,
+            storage,
+            client,
+        })
     }
 
     pub async fn start(&self) -> Result<(), Error> {
-        let (sender_committed_block, receiver_committed_block) =
-            mpsc::channel::<MsgCommittedBlock>(100);
+        let (committed_block_s, mut committed_block_r) = mpsc::channel::<MsgCommittedBlock>(100);
 
         // get chain info from database, if it doesn't exists, create a new one.
         let chain = self.load_chain_or_store()?;
@@ -39,21 +57,21 @@ impl App<PersistenceStorage<BackendDB>> {
             None => self.config.fetcher.start_block,
         };
 
-        // create a fetcher and run it
-        let fetcher_config = self.config.fetcher.clone();
-        let fetcher = Fetcher::new(fetcher_config, sender_committed_block, start_block).await?;
-
-        tokio::spawn(async move {
-            fetcher.run().await.unwrap();
-            panic!("fetcher is stopped unexpectedly");
-        });
+        // run fetcher
+        let committed_block_fetcher = CommittedBlockFetcher::new(self.client.clone()).await?;
+        committed_block_fetcher.run_loop(committed_block_s, start_block);
 
         // create a committer and run it
         let db_config = self.config.db.clone();
-        let mut committer = Committer::new(db_config, chain, receiver_committed_block, start_block);
-        committer.run().await?;
+        let committer = Committer::new(db_config, chain);
 
-        Ok(())
+        loop {
+            tokio::select! {
+                Some(val) = committed_block_r.recv() => {
+                    committer.commit_block(val).unwrap();
+                }
+            }
+        }
     }
 
     // load chain info from storage
