@@ -12,6 +12,7 @@ mod responses;
 mod resputil;
 mod router;
 pub mod server;
+mod server_route;
 
 type GenericError = Box<dyn std::error::Error + Send + Sync + 'static>;
 

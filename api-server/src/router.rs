@@ -5,7 +5,7 @@ use cosmscan_models::{db::BackendDB, storage::PersistenceStorage};
 use futures::Future;
 use hyper::{Body, Method, Request, Response};
 
-use crate::{errors::Error, resputil::ResponseBuilder, AppState, GenericError};
+use crate::{errors::Error, resputil::ResponseBuilder, AppState, GenericError, server::ApiServer, handlers};
 
 type InternalRotuer = route_recognizer::Router<Box<dyn Handler>>;
 
@@ -31,6 +31,10 @@ where
     ) -> Result<Response<Body>, GenericError> {
         self(req, state).await
     }
+}
+
+pub trait RouterRegister {
+    fn router(&self) -> Router;
 }
 
 pub struct Router {
