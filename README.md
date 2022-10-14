@@ -53,6 +53,6 @@ $ RUST_LOG=info cargo run --bin indexer -- --filename config.toml
 ```
 
 ## Contribution Guidelines
-If you need more feature, Please open the issue.
+Feel free to open an issue or pull request.
 
 ![Database](./docs/images/db.png)
