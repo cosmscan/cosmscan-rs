@@ -1,4 +1,8 @@
-use crate::{server::ApiServer, router::{RouterRegister, Router}, handlers};
+use crate::{
+    handlers,
+    router::{Router, RouterRegister},
+    server::ApiServer,
+};
 
 impl RouterRegister for ApiServer {
     fn router(&self) -> Router {

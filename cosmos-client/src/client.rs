@@ -10,7 +10,6 @@ use crate::{
 };
 
 type TxClient = service_client::ServiceClient<tonic::transport::Channel>;
-type StakingClient = cosmos::staking::v1beta1::query_client::QueryClient<tonic::transport::Channel>;
 
 pub struct ClientConfig {
     pub tendermint_rpc_endpoint: String,
