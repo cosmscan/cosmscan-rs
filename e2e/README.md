@@ -4,7 +4,7 @@ This folder holds set of useful tools for testing in a e2e manner.
 ### Run e2e script
 
 ```shell
-$ docker-compose -f docker-compose.flood.yml up
+$ docker-compose up --build
 ```
 
 If you run the command above:
